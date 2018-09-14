@@ -30,7 +30,8 @@ export interface ComponentId<P = any[], D = any> extends Symbol {}
 
 interface System<G> {
   components: ComponentId[];
-  mask: number;
+  require: number;
+  exclude: number;
   step: StepFn<G, any[][]>;
 }
 
@@ -69,7 +70,7 @@ export default class World<G> {
   globals: G;
   systems = new Map<SystemId, System<G>>();
 
-  private entitiesIndex = new Map<EntityId, Entity[]>();
+  private entitiesIndex = new Map<string, Entity[]>();
 
   constructor(globals: G) {
     this.globals = globals;
@@ -91,22 +92,9 @@ export default class World<G> {
     components: T,
     step: StepFn<G, InferData<T>>,
   ) {
-    let mask = 0;
-    const componentSymbols: ComponentId[] = [];
-    for (let symbol of components) {
-      let modifier: Modifier | undefined;
-      if (Array.isArray(symbol)) {
-        [modifier, symbol] = symbol;
-      }
-      const component = this.components.get(symbol);
-      if (!component) throw Error(`invalid component ${symbol}`);
-      // Only require this component in the default case (no modifier is set).
-      if (!modifier) mask |= component.bit;
-      // TODO: Handle NOT here.
-      componentSymbols.push(symbol);
-    }
+    const [compSymbols, require, exclude] = this.resolveAnyComponentIds(...components);
     const symbol: SystemId = Symbol(`${name} system`);
-    this.systems.set(symbol, {components: componentSymbols, mask, step});
+    this.systems.set(symbol, {components: compSymbols, require, exclude, step});
     return symbol;
   }
 
@@ -129,13 +117,14 @@ export default class World<G> {
     const entity = {id, mask};
     this.entities.push(entity);
     // Update existing indexes.
-    for (const [indexMask, indexList] of this.entitiesIndex) {
-      if ((mask & indexMask) !== indexMask) continue;
+    for (const [indexKey, indexList] of this.entitiesIndex) {
+      const [require, exclude] = indexKey.split('-').map(parseInt);
+      if ((mask & require) !== require || mask & exclude) continue;
       indexList.push(entity);
       console.log(
-        'Added entity %d to index for mask %d (new count: %d)',
+        'Added entity %d to index for filter %s (new count: %d)',
         id,
-        indexMask,
+        indexKey,
         indexList.length,
       );
     }
@@ -158,7 +147,7 @@ export default class World<G> {
     // Loop through every system...
     for (const system of this.systems.values()) {
       // Get only the entities that have the component this system acts upon.
-      const entities = this.entitiesByMask(system.mask);
+      const entities = this.filterEntities(system.require, system.exclude);
       // Collect a list of data for each component (except tag components).
       const dataLists: any[][] = [];
       for (const componentId of system.components) {
@@ -182,14 +171,37 @@ export default class World<G> {
     }
   }
 
-  private entitiesByMask(mask: number) {
-    if (!mask) return this.entities;
-    if (this.entitiesIndex.has(mask)) {
-      return this.entitiesIndex.get(mask)!;
-    }
-    const entities = this.entities.filter(e => (e.mask & mask) === mask);
-    this.entitiesIndex.set(mask, entities);
-    console.log('Built index for mask %d (count: %d)', mask, entities.length);
+  private filterEntities(require: number, exclude: number = 0) {
+    if (!require && !exclude) return this.entities;
+    const indexKey = `${require}-${exclude}`;
+    const cachedEntities = this.entitiesIndex.get(indexKey);
+    if (cachedEntities) return cachedEntities;
+    const entities = this.entities.filter(
+      e => (e.mask & require) === require && !(e.mask & exclude),
+    );
+    this.entitiesIndex.set(indexKey, entities);
+    console.log('Built index for filter %s (count: %d)', indexKey, entities.length);
     return entities;
+  }
+
+  private resolveAnyComponentIds(
+    ...components: AnyComponentId[]
+  ): [ComponentId[], number, number] {
+    const componentSymbols: ComponentId[] = [];
+    let require = 0;
+    let exclude = 0;
+    for (let symbol of components) {
+      let modifier: Modifier | undefined;
+      if (Array.isArray(symbol)) {
+        [modifier, symbol] = symbol;
+      }
+      const component = this.components.get(symbol);
+      if (!component) throw Error(`invalid component ${symbol}`);
+      // Only require this component in the default case (no modifier is set).
+      if (!modifier) require |= component.bit;
+      if (modifier === NOT) exclude |= component.bit;
+      componentSymbols.push(symbol);
+    }
+    return [componentSymbols, require, exclude];
   }
 }
