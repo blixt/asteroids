@@ -3,9 +3,10 @@ import World from './lib/world';
 interface Globals {
   context?: CanvasRenderingContext2D;
   deltaTime: number;
+  size: {width: number; height: number};
 }
 
-export const world = new World<Globals>({deltaTime: 0});
+export const world = new World<Globals>({deltaTime: 0, size: {width: 0, height: 0}});
 
 /* C O M P O N E N T S */
 
@@ -107,7 +108,11 @@ world.addSystem(
 
 const TAU = Math.PI * 2;
 
-export function createAsteroid(cx: number, cy: number, radius: number) {
+export function createAsteroid() {
+  const cx = world.globals.size.width / 2;
+  const cy = world.globals.size.height / 2;
+  const radius = Math.max(cx, cy) + 60;
+  // The asteroid will be placed randomly along a circle around the viewport.
   const angle = Math.random() * TAU;
   // Place the asteroid at the specified radius from center.
   const x = cx + radius * Math.cos(angle);
