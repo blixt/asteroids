@@ -92,7 +92,7 @@ export default class World<G> {
     components: T,
     step: StepFn<G, InferData<T>>,
   ) {
-    const [compSymbols, require, exclude] = this.resolveAnyComponentIds(...components);
+    const [compSymbols, require, exclude] = this.resolveAnyComponentIds(components);
     const symbol: SystemId = Symbol(`${name} system`);
     this.systems.set(symbol, {components: compSymbols, require, exclude, step});
     return symbol;
@@ -142,11 +142,16 @@ export default class World<G> {
     return (entity.mask & component.bit) > 0;
   }
 
+  query(...components: AnyComponentId[]): Entity[] {
+    const [, require, exclude] = this.resolveAnyComponentIds(components);
+    return this.filterEntities(require, exclude);
+  }
+
   step() {
     // ~ One small step for a system, a giant leap for World. ~
     // Loop through every system...
     for (const system of this.systems.values()) {
-      // Get only the entities that have the component this system acts upon.
+      // Get only the entities that have the components this system acts upon.
       const entities = this.filterEntities(system.require, system.exclude);
       // Collect a list of data for each component (except tag components).
       const dataLists: any[][] = [];
@@ -171,7 +176,7 @@ export default class World<G> {
     }
   }
 
-  private filterEntities(require: number, exclude: number = 0) {
+  private filterEntities(require: number, exclude: number) {
     if (!require && !exclude) return this.entities;
     const indexKey = `${require}-${exclude}`;
     const cachedEntities = this.entitiesIndex.get(indexKey);
@@ -184,13 +189,11 @@ export default class World<G> {
     return entities;
   }
 
-  private resolveAnyComponentIds(
-    ...components: AnyComponentId[]
-  ): [ComponentId[], number, number] {
+  private resolveAnyComponentIds(ids: AnyComponentId[]): [ComponentId[], number, number] {
     const componentSymbols: ComponentId[] = [];
     let require = 0;
     let exclude = 0;
-    for (let symbol of components) {
+    for (let symbol of ids) {
       let modifier: Modifier | undefined;
       if (Array.isArray(symbol)) {
         [modifier, symbol] = symbol;
