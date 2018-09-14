@@ -45,29 +45,24 @@ interface Modifier extends Symbol {}
 const MAYBE: Modifier = Symbol('maybe');
 const NOT: Modifier = Symbol('not');
 
-type ModifierComponentId<P, D> = [Modifier, ComponentId<P, D>];
-type MaybeModifierComponentId<P = any[], D = any> =
-  | ComponentId<P, D>
-  | ModifierComponentId<P, D>;
+type ModComponentId<P, D> = [Modifier, ComponentId<P, D>];
+type AnyComponentId<P = any[], D = any> = ComponentId<P, D> | ModComponentId<P, D>;
 
 // Use Maybe to also include entities that don't have this component. The data
 // array will contain `undefined` for entities that do not have the component.
-export function Maybe<P, D>(component: ComponentId<P, D>): ModifierComponentId<P, D> {
+export function Maybe<P, D>(component: ComponentId<P, D>): ModComponentId<P, D | null> {
   return [MAYBE, component];
 }
 
 // Use Not to exclude all entities with this component.
-export function Not<P, D>(component: ComponentId<P, D>): ModifierComponentId<P, D> {
+export function Not<P>(component: ComponentId<P, any>): ModComponentId<P, void> {
   return [NOT, component];
 }
 
 // Infer a tuple of data lists from a tuple of typed ComponentIds.
 type InferData<T extends any[]> = {
   0: [];
-  1: ((...t: T) => any) extends ((
-    d: MaybeModifierComponentId<any, infer D>,
-    ...u: infer U
-  ) => any)
+  1: ((...t: T) => any) extends ((d: AnyComponentId<any, infer D>, ...u: infer U) => any)
     ? (D extends void ? InferData<U> : Merge<InferData<U>, D[]>)
     : never;
 }[T extends [any, ...any[]] ? 1 : 0];
@@ -95,7 +90,7 @@ export default class World<G = Data> {
     return symbol;
   }
 
-  addSystem<T extends Tuple<MaybeModifierComponentId>>(
+  addSystem<T extends Tuple<AnyComponentId>>(
     name: string,
     components: T,
     step: StepFn<G, InferData<T>>,
@@ -179,7 +174,11 @@ export default class World<G = Data> {
           continue;
         }
         // Get the component data for the entities (in the correct order).
-        const data = entities.map(e => storage.get(e.id));
+        const data = entities.map(e => {
+          const value = storage.get(e.id);
+          // The value may be undefined in case this system has a Maybe requirement.
+          return value !== undefined ? value : null;
+        });
         // Add it to the pile.
         dataLists.push(data);
       }
