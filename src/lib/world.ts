@@ -82,9 +82,9 @@ export default class World<G> {
       component.factory = factory;
       component.storage = new Map();
     }
-    const symbol: ComponentId<P, D> = Symbol(`${name} component`);
-    this.components.set(symbol, component);
-    return symbol;
+    const id: ComponentId<P, D> = Symbol(`${name} component`);
+    this.components.set(id, component);
+    return id;
   }
 
   addSystem<T extends Tuple<AnyComponentId>>(
@@ -92,10 +92,10 @@ export default class World<G> {
     components: T,
     step: StepFn<G, InferData<T>>,
   ) {
-    const [compSymbols, require, exclude] = this.resolveAnyComponentIds(components);
-    const symbol: SystemId = Symbol(`${name} system`);
-    this.systems.set(symbol, {components: compSymbols, require, exclude, step});
-    return symbol;
+    const [componentIds, require, exclude] = this.resolveAnyComponentIds(components);
+    const id: SystemId = Symbol(`${name} system`);
+    this.systems.set(id, {components: componentIds, require, exclude, step});
+    return id;
   }
 
   createEntity(componentEntries: Iterable<[ComponentId, any[]]>): EntityId {
@@ -190,21 +190,21 @@ export default class World<G> {
   }
 
   private resolveAnyComponentIds(ids: AnyComponentId[]): [ComponentId[], number, number] {
-    const componentSymbols: ComponentId[] = [];
+    const componentIds: ComponentId[] = [];
     let require = 0;
     let exclude = 0;
-    for (let symbol of ids) {
+    for (let id of ids) {
       let modifier: Modifier | undefined;
-      if (Array.isArray(symbol)) {
-        [modifier, symbol] = symbol;
+      if (Array.isArray(id)) {
+        [modifier, id] = id;
       }
-      const component = this.components.get(symbol);
-      if (!component) throw Error(`invalid component ${symbol}`);
+      const component = this.components.get(id);
+      if (!component) throw Error(`invalid component ${id}`);
       // Only require this component in the default case (no modifier is set).
       if (!modifier) require |= component.bit;
       if (modifier === NOT) exclude |= component.bit;
-      componentSymbols.push(symbol);
+      componentIds.push(id);
     }
-    return [componentSymbols, require, exclude];
+    return [componentIds, require, exclude];
   }
 }
