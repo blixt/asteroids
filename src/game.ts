@@ -104,21 +104,35 @@ world.addSystem(
 
 /* E N T I T Y   C R E A T I O N */
 
-export function createAsteroid() {
-  const x = 0;
-  const y = 0;
-  const points: [number, number][] = [];
+const TAU = Math.PI * 2;
+
+export function createAsteroid(cx: number, cy: number, radius: number) {
+  const angle = Math.random() * TAU;
+  // Place the asteroid at the specified radius from center.
+  const x = cx + radius * Math.cos(angle);
+  const y = cy + radius * Math.sin(angle);
+  // The angle that the asteroid will be moving in (~opposite of position angle).
+  const antiAngle = angle - Math.PI + ((Math.random() - 0.5) * TAU) / 6;
+  // Set a random velocity for the asteroid.
+  const velocityMagnitude = 0.3 + Math.random() * 0.5;
+  const vx = velocityMagnitude * Math.cos(antiAngle);
+  const vy = velocityMagnitude * Math.sin(antiAngle);
+  // Determine minimum size for the asteroid.
   const size = 10 + Math.random() * 8;
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+  // Create a list of points for the asteroid.
+  const points: [number, number][] = [];
+  for (let a = 0; a < TAU; a += TAU / 12) {
+    // Vary the point distance from the center of the asteroid.
     const variation = Math.random() * 8;
+    // Add the point to the list of polygon points.
     points.push([Math.cos(a) * (size + variation), Math.sin(a) * (size + variation)]);
   }
   return world
     .entity()
     .tagged(asteroid)
-    .with(polygon, {lineWidth: 2, strokeStyle: '#ccc'}, ...points)
+    .with(polygon, {lineWidth: 1.5, strokeStyle: '#eec'}, ...points)
     .with(position, x, y)
-    .with(velocity, Math.random() - 0.5, Math.random() - 0.5)
+    .with(velocity, vx, vy)
     .create();
 }
 

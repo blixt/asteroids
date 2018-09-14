@@ -13,7 +13,7 @@ createPlayer(135, 490, {vy: -10});
 
 // Create some asteroids.
 for (let i = 0; i < 10; i++) {
-  createAsteroid();
+  createAsteroid(135, 240, 300);
 }
 
 (() => {
