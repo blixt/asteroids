@@ -13,6 +13,7 @@ export const world = new World<Globals>({deltaTime: 0, size: {width: 0, height: 
 // Tag components:
 const asteroid = world.addComponent('asteroid');
 const player = world.addComponent('player');
+const wrapsAround = world.addComponent('wrapsAround');
 
 // Data components:
 const friction = world.addComponent('friction', (amount: number) => ({amount}));
@@ -72,6 +73,40 @@ world.addSystem('clearScreen', [], (world, entities) => {
   const ctx = world.globals.context!;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 });
+
+// Wrap objects that move outside the screen area around to the other side.
+world.addSystem(
+  'wrap',
+  [wrapsAround, position, velocity],
+  (world, entities, positions, velocities) => {
+    const {width, height} = world.globals.size;
+    const padding = 30;
+    // Returns a 2-bit mask for outside horizontally/vertically.
+    function outside(x: number, y: number) {
+      return (
+        (x < -padding || x >= width + padding ? 1 : 0) |
+        (y < -padding || y >= height + padding ? 2 : 0)
+      );
+    }
+    for (let i = 0; i < entities.length; i++) {
+      const position = positions[i];
+      const {vx, vy} = velocities[i];
+      if (outside(position.x, position.y)) {
+        // Ignore objects that were already outside the wrapping area.
+        continue;
+      }
+      const outsideAfterMoving = outside(position.x + vx, position.y + vy);
+      if (outsideAfterMoving & 1) {
+        // Wrap objects horizontally.
+        position.x += vx < 0 ? padding + width + padding : -(padding + width + padding);
+      }
+      if (outsideAfterMoving & 2) {
+        // Wrap objects vertically.
+        position.y += vy < 0 ? padding + height + padding : -(padding + height + padding);
+      }
+    }
+  },
+);
 
 // Draw all polygons on screen.
 world.addSystem(
@@ -135,7 +170,7 @@ export function createAsteroid() {
   }
   return world
     .entity()
-    .tagged(asteroid)
+    .tagged(asteroid, wrapsAround)
     .with(polygon, {lineWidth: 1.5, strokeStyle: '#eec'}, ...points)
     .with(position, x, y)
     .with(velocity, vx, vy)
@@ -145,7 +180,7 @@ export function createAsteroid() {
 export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
   return world
     .entity()
-    .tagged(player)
+    .tagged(player, wrapsAround)
     .with(friction, 0.04)
     .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-9, 9], [0, 6], [9, 9])
     .with(position, x, y)
