@@ -46,9 +46,9 @@ world.addSystem(
   [friction, velocity],
   (world, entities, frictions, velocities) => {
     const dt = world.globals.deltaTime;
-    for (let i = 0; i < entities.length; i++) {
-      const {amount} = frictions[i];
-      const velocity = velocities[i];
+    for (const {id} of entities) {
+      const {amount} = frictions.get(id);
+      const velocity = velocities.get(id);
       velocity.vx *= 1 - amount * dt;
       velocity.vy *= 1 - amount * dt;
     }
@@ -61,9 +61,9 @@ world.addSystem(
   [position, velocity],
   (world, entities, positions, velocities) => {
     const dt = world.globals.deltaTime;
-    for (let i = 0; i < entities.length; i++) {
-      const position = positions[i];
-      const {vx, vy} = velocities[i];
+    for (const {id} of entities) {
+      const position = positions.get(id);
+      const {vx, vy} = velocities.get(id);
       position.x += vx * dt;
       position.y += vy * dt;
     }
@@ -90,9 +90,9 @@ world.addSystem(
         (y < -padding || y >= height + padding ? 2 : 0)
       );
     }
-    for (let i = 0; i < entities.length; i++) {
-      const position = positions[i];
-      const {vx, vy} = velocities[i];
+    for (const {id} of entities) {
+      const position = positions.get(id);
+      const {vx, vy} = velocities.get(id);
       if (outside(position.x, position.y)) {
         // Ignore objects that were already outside the wrapping area.
         continue;
@@ -116,9 +116,9 @@ world.addSystem(
   [polygon, position],
   (world, entities, polygons, positions) => {
     const ctx = world.globals.context!;
-    for (let i = 0; i < entities.length; i++) {
-      const {options, points} = polygons[i];
-      const {x, y} = positions[i];
+    for (const {id} of entities) {
+      const {options, points} = polygons.get(id);
+      const {x, y} = positions.get(id);
       ctx.save();
       ctx.translate(x, y);
       ctx.beginPath();

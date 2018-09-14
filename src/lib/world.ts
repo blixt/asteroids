@@ -14,10 +14,19 @@ interface Entity {
 
 type FactoryFn<P extends any[], D> = (...properties: P) => D;
 
+interface Storage<D> {
+  get(id: EntityId): D | undefined;
+  set(id: EntityId, data: D): void;
+}
+
+interface ReadonlyStorage<D> {
+  get(id: EntityId): D;
+}
+
 interface Component<D = any> {
   bit: number;
   factory?: FactoryFn<any[], D>;
-  storage?: Map<EntityId, D>;
+  storage?: Storage<D>;
 }
 
 type StepFn<G, D extends any[][]> = (
@@ -32,7 +41,7 @@ interface System<G> {
   components: ComponentId[];
   require: number;
   exclude: number;
-  step: StepFn<G, any[][]>;
+  step: StepFn<G, any[]>;
 }
 
 export interface SystemId extends Symbol {}
@@ -47,7 +56,9 @@ type AnyComponentId<P = any[], D = any> = ComponentId<P, D> | ModComponentId<P, 
 
 // Use Maybe to also include entities that don't have this component. The data
 // array will contain `undefined` for entities that do not have the component.
-export function Maybe<P, D>(component: ComponentId<P, D>): ModComponentId<P, D | null> {
+export function Maybe<P, D>(
+  component: ComponentId<P, D>,
+): ModComponentId<P, D | undefined> {
   return [MAYBE, component];
 }
 
@@ -57,10 +68,10 @@ export function Not<P>(component: ComponentId<P, any>): ModComponentId<P, void> 
 }
 
 // Infer a tuple of data lists from a tuple of typed ComponentIds.
-type InferData<T extends any[]> = {
+type InferStorage<T extends any[]> = {
   0: [];
   1: ((...t: T) => any) extends ((d: AnyComponentId<any, infer D>, ...u: infer U) => any)
-    ? (D extends void ? InferData<U> : Merge<InferData<U>, D[]>)
+    ? (D extends void ? InferStorage<U> : Merge<InferStorage<U>, ReadonlyStorage<D>>)
     : never;
 }[T extends [any, ...any[]] ? 1 : 0];
 
@@ -90,7 +101,7 @@ export default class World<G> {
   addSystem<T extends Tuple<AnyComponentId>>(
     name: string,
     components: T,
-    step: StepFn<G, InferData<T>>,
+    step: StepFn<G, InferStorage<T>>,
   ) {
     const [componentIds, require, exclude] = this.resolveAnyComponentIds(components);
     const id: SystemId = Symbol(`${name} system`);
@@ -153,8 +164,8 @@ export default class World<G> {
     for (const system of this.systems.values()) {
       // Get only the entities that have the components this system acts upon.
       const entities = this.filterEntities(system.require, system.exclude);
-      // Collect a list of data for each component (except tag components).
-      const dataLists: any[][] = [];
+      // Collect a list of storages for each component (except tag components).
+      const storageList = [];
       for (const componentId of system.components) {
         const component = this.components.get(componentId);
         if (!component) throw Error('internal state error');
@@ -163,16 +174,10 @@ export default class World<G> {
           // This is a tag component so it has no data. No need to waste cycles.
           continue;
         }
-        // Get the component data for the entities (in the correct order).
-        const data = entities.map(e => {
-          const value = storage.get(e.id);
-          // The value may be undefined in case this system has a Maybe requirement.
-          return value !== undefined ? value : null;
-        });
-        // Add it to the pile.
-        dataLists.push(data);
+        // Add the storage to the step function parameter list.
+        storageList.push(storage);
       }
-      system.step(this, entities, ...dataLists);
+      system.step(this, entities, ...storageList);
     }
   }
 
