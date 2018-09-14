@@ -1,0 +1,14 @@
+body {
+  background: linear-gradient(135deg, #45484d 0%, #25282d 100%);
+  align-items: center;
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  margin: 0;
+}
+
+canvas {
+  background: #000;
+  border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 2px 8px;
+}

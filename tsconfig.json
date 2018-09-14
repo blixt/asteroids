@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "build/dist",
+    "rootDir": "src",
+
+    "jsx": "react",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "target": "esnext",
+
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "strictNullChecks": true
+  },
+  "exclude": ["node_modules", "build", "jest", "src/setupTests.ts"]
+}

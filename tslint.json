@@ -1,0 +1,22 @@
+{
+  "extends": ["tslint:recommended", "tslint-react", "tslint-config-prettier"],
+  "linterOptions": {
+    "exclude": ["node_modules/**/*.ts"]
+  },
+  "rules": {
+    "array-type": false,
+    "curly": [true, "ignore-same-line"],
+    "interface-name": false,
+    "jsx-no-lambda": false,
+    "max-classes-per-file": false,
+    "member-access": false,
+    "no-bitwise": false,
+    "no-console": false,
+    "no-empty-interface": false,
+    "no-shadowed-variable": false,
+    "trailing-comma": [
+      true,
+      {"multiline": "always", "singleline": "never", "esSpecCompliant": true}
+    ]
+  }
+}
