@@ -127,7 +127,7 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .entity()
     .tagged(player)
     .with(friction, 0.04)
-    .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-9, 9], [9, 9])
+    .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-9, 9], [0, 6], [9, 9])
     .with(position, x, y)
     .with(velocity, vx, vy)
     .create();
