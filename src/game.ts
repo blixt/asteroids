@@ -36,6 +36,7 @@ const velocity = world.addComponent('velocity', (vx: number, vy: number) => ({vx
 
 /* S Y S T E M S */
 
+// Make objects with velocity slow down over time.
 world.addSystem(
   'friction',
   [friction, velocity],
@@ -50,7 +51,7 @@ world.addSystem(
   },
 );
 
-// Move system.
+// Make objects with position and velocity move.
 world.addSystem(
   'move',
   [position, velocity],
