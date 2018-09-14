@@ -70,10 +70,6 @@ world.addSystem('clearScreen', [], (world, entities) => {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 });
 
-world.addSystem('testing', [player, position], (world, entities, positions) => {
-  console.log(positions);
-});
-
 // Draw all polygons on screen.
 world.addSystem(
   'drawPolys',
