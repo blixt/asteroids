@@ -10,6 +10,7 @@ export const world = new World<Globals>({deltaTime: 0});
 /* C O M P O N E N T S */
 
 // Tag components:
+const asteroid = world.addComponent('asteroid');
 const player = world.addComponent('player');
 
 // Data components:
@@ -104,7 +105,21 @@ world.addSystem(
 /* E N T I T Y   C R E A T I O N */
 
 export function createAsteroid() {
-  return world.entity().create();
+  const x = 0;
+  const y = 0;
+  const points: [number, number][] = [];
+  const size = 10 + Math.random() * 8;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+    const variation = Math.random() * 8;
+    points.push([Math.cos(a) * (size + variation), Math.sin(a) * (size + variation)]);
+  }
+  return world
+    .entity()
+    .tagged(asteroid)
+    .with(polygon, {lineWidth: 2, strokeStyle: '#ccc'}, ...points)
+    .with(position, x, y)
+    .with(velocity, Math.random() - 0.5, Math.random() - 0.5)
+    .create();
 }
 
 export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
