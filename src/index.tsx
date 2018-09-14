@@ -1,38 +1,20 @@
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+
 import {createAsteroid, createPlayer, world} from './game';
+import Viewport from './viewport';
 
 import './index.css';
 
-const canvas = document.querySelector('canvas')!;
-const context = canvas.getContext('2d')!;
-
-(() => {
-  const rect = canvas.getBoundingClientRect();
-  // Set the world size based on the canvas size.
-  world.globals.size = {width: rect.width, height: rect.height};
-  // Handle retina screens.
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height}px`;
-  context.scale(dpr, dpr);
-})();
-
-// Make the canvas context accessible by the draw system.
-world.globals.context = context;
+const size = {width: 270, height: 480};
+world.globals.size = size;
 
 // Create the player.
-createPlayer(world.globals.size.width / 2, world.globals.size.height + 10, {vy: -10});
+createPlayer(size.width / 2, size.height + 10, {vy: -10});
 
 // Create some asteroids.
 for (let i = 0; i < 10; i++) {
   createAsteroid();
 }
 
-function frame(ts: number) {
-  world.globals.deltaTime = 1;
-  world.step();
-  requestAnimationFrame(frame);
-}
-
-frame(0);
+ReactDOM.render(<Viewport run={true} world={world} />, document.getElementById('root'));

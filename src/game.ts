@@ -6,6 +6,8 @@ interface Globals {
   size: {width: number; height: number};
 }
 
+export type GameWorld = World<Globals>;
+
 export const world = new World<Globals>({deltaTime: 0, size: {width: 0, height: 0}});
 
 /* C O M P O N E N T S */
