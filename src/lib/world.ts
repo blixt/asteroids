@@ -1,9 +1,5 @@
 import EntityBuilder from './entitybuilder';
 
-interface Data {
-  [key: string]: any;
-}
-
 type Merge<T extends any[], I> = ((_: I, ...t: T) => any) extends ((...m: infer M) => any)
   ? M
   : never;
@@ -18,10 +14,10 @@ interface Entity {
 
 type FactoryFn<P extends any[], D> = (...properties: P) => D;
 
-interface Component {
+interface Component<D = any> {
   bit: number;
-  factory?: FactoryFn<any[], any>;
-  storage?: Map<EntityId, Data>;
+  factory?: FactoryFn<any[], D>;
+  storage?: Map<EntityId, D>;
 }
 
 type StepFn<G, D extends any[][]> = (
@@ -67,7 +63,7 @@ type InferData<T extends any[]> = {
     : never;
 }[T extends [any, ...any[]] ? 1 : 0];
 
-export default class World<G = Data> {
+export default class World<G> {
   components = new Map<ComponentId, Component>();
   entities: Entity[] = [];
   globals: G;
@@ -80,7 +76,7 @@ export default class World<G = Data> {
   }
 
   addComponent<P extends any[], D = void>(name: string, factory?: FactoryFn<P, D>) {
-    const component: Component = {bit: 1 << this.components.size};
+    const component: Component<D> = {bit: 1 << this.components.size};
     if (factory) {
       component.factory = factory;
       component.storage = new Map();
