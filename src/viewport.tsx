@@ -62,7 +62,7 @@ export default class Viewport extends React.Component<ViewportProps> {
   private frame(ts: number) {
     let dt = 1;
     if (ts) {
-      if (this.lastTs) {
+      if (ts - this.lastTs < 250) {
         dt = (ts - this.lastTs) / (1000 / 60);
       }
       this.lastTs = ts;

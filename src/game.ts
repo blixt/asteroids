@@ -74,6 +74,42 @@ world.addSystem(
   },
 );
 
+// Wrap objects that move outside the screen area around to the other side.
+world.addSystem(
+  'wrap',
+  [wrapsAround, position, velocity],
+  (world, entities, positions, velocities) => {
+    // TODO: Handle extreme cases where objects should wrap 2+ times.
+    const dt = world.globals.deltaTime;
+    const {width, height} = world.globals.size;
+    const padding = 30;
+    // Returns a 2-bit mask for outside horizontally/vertically.
+    function outside(x: number, y: number) {
+      return (
+        (x < -padding || x >= width + padding ? 1 : 0) |
+        (y < -padding || y >= height + padding ? 2 : 0)
+      );
+    }
+    for (const {id} of entities) {
+      const position = positions.get(id);
+      const {vx, vy} = velocities.get(id);
+      if (outside(position.x, position.y)) {
+        // Ignore objects that were already outside the wrapping area.
+        continue;
+      }
+      const outsideAfterMoving = outside(position.x + vx * dt, position.y + vy * dt);
+      if (outsideAfterMoving & 1) {
+        // Wrap objects horizontally.
+        position.x += vx < 0 ? padding + width + padding : -(padding + width + padding);
+      }
+      if (outsideAfterMoving & 2) {
+        // Wrap objects vertically.
+        position.y += vy < 0 ? padding + height + padding : -(padding + height + padding);
+      }
+    }
+  },
+);
+
 // Make objects with position and velocity move.
 world.addSystem(
   'move',
@@ -160,40 +196,6 @@ world.addSystem('clearScreen', [], (world, entities) => {
   const ctx = world.globals.context!;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 });
-
-// Wrap objects that move outside the screen area around to the other side.
-world.addSystem(
-  'wrap',
-  [wrapsAround, position, velocity],
-  (world, entities, positions, velocities) => {
-    const {width, height} = world.globals.size;
-    const padding = 30;
-    // Returns a 2-bit mask for outside horizontally/vertically.
-    function outside(x: number, y: number) {
-      return (
-        (x < -padding || x >= width + padding ? 1 : 0) |
-        (y < -padding || y >= height + padding ? 2 : 0)
-      );
-    }
-    for (const {id} of entities) {
-      const position = positions.get(id);
-      const {vx, vy} = velocities.get(id);
-      if (outside(position.x, position.y)) {
-        // Ignore objects that were already outside the wrapping area.
-        continue;
-      }
-      const outsideAfterMoving = outside(position.x + vx, position.y + vy);
-      if (outsideAfterMoving & 1) {
-        // Wrap objects horizontally.
-        position.x += vx < 0 ? padding + width + padding : -(padding + width + padding);
-      }
-      if (outsideAfterMoving & 2) {
-        // Wrap objects vertically.
-        position.y += vy < 0 ? padding + height + padding : -(padding + height + padding);
-      }
-    }
-  },
-);
 
 // Draw all polygons on screen.
 world.addSystem(
