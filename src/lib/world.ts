@@ -15,6 +15,7 @@ interface Entity {
 type FactoryFn<P extends any[], D> = (...properties: P) => D;
 
 interface Storage<D> {
+  delete(id: EntityId): void;
   get(id: EntityId): D | undefined;
   set(id: EntityId, data: D): void;
 }
@@ -77,11 +78,12 @@ type InferStorage<T extends any[]> = {
 
 export default class World<G> {
   components = new Map<ComponentId, Component>();
-  entities: Entity[] = [];
+  entities: (Entity | null)[] = [];
   globals: G;
   systems = new Map<SystemId, System<G>>();
 
   private entitiesIndex = new Map<string, Entity[]>();
+  private entitiesToDestroy = new Set<number>();
 
   constructor(globals: G) {
     this.globals = globals;
@@ -111,8 +113,9 @@ export default class World<G> {
 
   createEntity(componentEntries: Iterable<[ComponentId, any[]]>): EntityId {
     let mask = 0;
-    // TODO: Not directly bound to indices in entities.
+    // TODO: Generations for entity ids.
     // TODO: Reuse empty slots.
+    // TODO: Track lowest empty index? (Compare perf with tracking highest.)
     const id: EntityId = this.entities.length;
     for (const [componentId, properties] of componentEntries) {
       const component = this.components.get(componentId);
@@ -143,6 +146,10 @@ export default class World<G> {
     return id;
   }
 
+  destroyEntity(id: EntityId) {
+    this.entitiesToDestroy.add(id);
+  }
+
   entity() {
     return new EntityBuilder<G>(this);
   }
@@ -160,6 +167,8 @@ export default class World<G> {
 
   step() {
     // ~ One small step for a system, a giant leap for World. ~
+    // Remove entities marked for destruction.
+    this.purgeDestroyedEntities();
     // Loop through every system...
     for (const system of this.systems.values()) {
       // Get only the entities that have the components this system acts upon.
@@ -182,16 +191,50 @@ export default class World<G> {
   }
 
   private filterEntities(require: number, exclude: number) {
-    if (!require && !exclude) return this.entities;
     const indexKey = `${require}-${exclude}`;
     const cachedEntities = this.entitiesIndex.get(indexKey);
     if (cachedEntities) return cachedEntities;
     const entities = this.entities.filter(
-      e => (e.mask & require) === require && !(e.mask & exclude),
-    );
+      e => e && (e.mask & require) === require && !(e.mask & exclude),
+    ) as Entity[];
     this.entitiesIndex.set(indexKey, entities);
     console.log('Built index for filter %s (count: %d)', indexKey, entities.length);
     return entities;
+  }
+
+  private purgeDestroyedEntities() {
+    if (this.entitiesToDestroy.size === 0) return;
+    // TODO: Generations for entity ids to avoid referencing wrong entity.
+    // Remove component data for deleted entities.
+    for (const component of this.components.values()) {
+      if (!component.storage) continue;
+      for (const id of this.entitiesToDestroy) {
+        const {mask} = this.entities[id]!;
+        if (!(mask & component.bit)) continue;
+        component.storage.delete(id);
+      }
+    }
+    // Update indexes.
+    for (const [indexKey, indexList] of this.entitiesIndex) {
+      const [require, exclude] = indexKey.split('-').map(parseInt);
+      for (const id of this.entitiesToDestroy) {
+        const entity = this.entities[id]!;
+        if ((entity.mask & require) !== require || entity.mask & exclude) continue;
+        const i = indexList.indexOf(entity);
+        indexList.splice(i, 1);
+        console.log(
+          'Removed entity %d from index for filter %s (new count: %d)',
+          id,
+          indexKey,
+          indexList.length,
+        );
+      }
+    }
+    // Make entity ids unused.
+    for (const id of this.entitiesToDestroy) {
+      this.entities[id] = null;
+    }
+    this.entitiesToDestroy.clear();
   }
 
   private resolveAnyComponentIds(ids: AnyComponentId[]): [ComponentId[], number, number] {
