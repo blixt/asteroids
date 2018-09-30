@@ -28,10 +28,9 @@ interface PolygonOptions {
 
 const polygon = world.addComponent(
   'polygon',
-  (options: PolygonOptions, ...points: [number, number][]) => ({
-    options,
-    points,
-  }),
+  (options: PolygonOptions, ...points: [number, number][]) => {
+    return {options, points};
+  },
 );
 
 const position = world.addComponent('position', (x: number, y: number) => ({x, y}));
