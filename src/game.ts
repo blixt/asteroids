@@ -201,8 +201,9 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .entity()
     .tagged(player, wrapsAround)
     .with(friction, 0.04)
-    .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-8, 9], [0, 6], [8, 9])
+    .with(polygon, {strokeStyle: '#0f0'}, [9, 0], [-9, 8], [-6, 0], [-9, -8])
     .with(position, x, y)
+    .with(rotation, -Math.PI / 2, 0)
     .with(velocity, vx, vy)
     .create();
 }
