@@ -1,4 +1,4 @@
-import World from './lib/world';
+import World, {Maybe} from './lib/world';
 
 interface Globals {
   context?: CanvasRenderingContext2D;
@@ -35,6 +35,10 @@ const polygon = world.addComponent(
 
 const position = world.addComponent('position', (x: number, y: number) => ({x, y}));
 
+const rotation = world.addComponent('rotation', (angle: number, delta: number) => {
+  return {angle, delta};
+});
+
 const velocity = world.addComponent('velocity', (vx: number, vy: number) => ({vx, vy}));
 
 /* S Y S T E M S */
@@ -68,6 +72,15 @@ world.addSystem(
     }
   },
 );
+
+// Make objects rotate.
+world.addSystem('rotate', [rotation], (world, entities, rotations) => {
+  const dt = world.globals.deltaTime;
+  for (const {id} of entities) {
+    const rotation = rotations.get(id);
+    rotation.angle += (rotation.delta * dt) % TAU;
+  }
+});
 
 // Clear the screen every frame.
 world.addSystem('clearScreen', [], (world, entities) => {
@@ -112,14 +125,18 @@ world.addSystem(
 // Draw all polygons on screen.
 world.addSystem(
   'drawPolys',
-  [polygon, position],
-  (world, entities, polygons, positions) => {
+  [polygon, position, Maybe(rotation)],
+  (world, entities, polygons, positions, rotations) => {
     const ctx = world.globals.context!;
     for (const {id} of entities) {
       const {options, points} = polygons.get(id);
       const {x, y} = positions.get(id);
+      const rotation = rotations.get(id);
       ctx.save();
       ctx.translate(x, y);
+      if (rotation) {
+        ctx.rotate(rotation.angle);
+      }
       ctx.beginPath();
       ctx.moveTo(...points[0]);
       for (let j = 1; j < points.length; j++) {
@@ -174,6 +191,7 @@ export function createAsteroid() {
     .tagged(asteroid, wrapsAround)
     .with(polygon, {lineWidth: 1.5, strokeStyle: '#eec'}, ...points)
     .with(position, x, y)
+    .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
     .with(velocity, vx, vy)
     .create();
 }
@@ -183,7 +201,7 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .entity()
     .tagged(player, wrapsAround)
     .with(friction, 0.04)
-    .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-9, 9], [0, 6], [9, 9])
+    .with(polygon, {strokeStyle: '#0f0'}, [0, -9], [-8, 9], [0, 6], [8, 9])
     .with(position, x, y)
     .with(velocity, vx, vy)
     .create();
