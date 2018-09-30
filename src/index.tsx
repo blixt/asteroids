@@ -32,6 +32,9 @@ const handleKey = (e: KeyboardEvent) => {
     case 'ArrowUp':
       world.globals.input.accelerate = isDown;
       break;
+    case ' ':
+      world.globals.input.shoot = isDown;
+      break;
     default:
       return;
   }

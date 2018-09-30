@@ -3,7 +3,7 @@ import World, {Maybe} from './lib/world';
 interface Globals {
   context?: CanvasRenderingContext2D;
   deltaTime: number;
-  input: {accelerate: boolean; turnLeft: boolean; turnRight: boolean};
+  input: {accelerate: boolean; shoot: boolean; turnLeft: boolean; turnRight: boolean};
   size: {width: number; height: number};
 }
 
@@ -11,7 +11,7 @@ export type GameWorld = World<Globals>;
 
 export const world = new World<Globals>({
   deltaTime: 0,
-  input: {accelerate: false, turnLeft: false, turnRight: false},
+  input: {accelerate: false, shoot: false, turnLeft: false, turnRight: false},
   size: {width: 0, height: 0},
 });
 
@@ -47,6 +47,13 @@ const rotation = world.addComponent('rotation', (angle: number, delta: number) =
 const selfDestruct = world.addComponent('selfDestruct', (time: number) => {
   return {age: 0, time};
 });
+
+const shooter = world.addComponent(
+  'shooter',
+  (rate: number, shooting: boolean = false) => {
+    return {cooldown: 0, rate, shooting};
+  },
+);
 
 const velocity = world.addComponent('velocity', (vx: number, vy: number) => ({vx, vy}));
 
@@ -85,12 +92,12 @@ world.addSystem(
 // Let the player control player entities.
 world.addSystem(
   'playerControl',
-  [player, rotation, velocity],
-  (world, entities, rotations, velocities) => {
+  [player, rotation, shooter, velocity],
+  (world, entities, rotations, shooters, velocities) => {
     const ACCELERATION = 0.1;
     const MAX_VELOCITY = 3;
     const TURN_SPEED = 0.05;
-    const {accelerate, turnLeft, turnRight} = world.globals.input;
+    const {accelerate, shoot, turnLeft, turnRight} = world.globals.input;
     for (const {id} of entities) {
       const rotation = rotations.get(id);
       rotation.delta = turnLeft !== turnRight ? (turnLeft ? -TURN_SPEED : TURN_SPEED) : 0;
@@ -105,6 +112,7 @@ world.addSystem(
           MAX_VELOCITY,
         );
       }
+      shooters.get(id).shooting = shoot;
     }
   },
 );
@@ -128,6 +136,24 @@ world.addSystem('selfDestruction', [selfDestruct], (world, entities, selfDestruc
     world.destroyEntity(id);
   }
 });
+
+// Allow objects to shoot projectiles.
+world.addSystem(
+  'shooting',
+  [position, rotation, shooter],
+  (world, entities, positions, rotations, shooters) => {
+    const dt = world.globals.deltaTime;
+    for (const {id} of entities) {
+      const {x, y} = positions.get(id);
+      const {angle} = rotations.get(id);
+      const shooter = shooters.get(id);
+      shooter.cooldown = Math.max(shooter.cooldown - dt, 0);
+      if (!shooter.shooting || shooter.cooldown > 0) continue;
+      shooter.cooldown = shooter.rate;
+      createProjectile(x, y, angle, 5);
+    }
+  },
+);
 
 // Clear the screen every frame.
 world.addSystem('clearScreen', [], (world, entities) => {
@@ -251,7 +277,25 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .with(polygon, {strokeStyle: '#0f0'}, [9, 0], [-9, 8], [-6, 0], [-9, -8])
     .with(position, x, y)
     .with(rotation, -Math.PI / 2, 0)
+    .with(shooter, 10)
     .with(velocity, vx, vy)
+    .create();
+}
+
+function createProjectile(
+  x: number,
+  y: number,
+  direction: number,
+  speed: number,
+  offset: number = 10,
+) {
+  return world
+    .entity()
+    .with(polygon, {fillStyle: '#ff0'}, [2, 0], [-2, 1], [-2, -1])
+    .with(position, x + Math.cos(direction) * offset, y + Math.sin(direction) * offset)
+    .with(rotation, direction, 0)
+    .with(selfDestruct, 50)
+    .with(velocity, Math.cos(direction) * speed, Math.sin(direction) * speed)
     .create();
 }
 
