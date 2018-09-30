@@ -3,12 +3,17 @@ import World, {Maybe} from './lib/world';
 interface Globals {
   context?: CanvasRenderingContext2D;
   deltaTime: number;
+  input: {accelerate: boolean; turnLeft: boolean; turnRight: boolean};
   size: {width: number; height: number};
 }
 
 export type GameWorld = World<Globals>;
 
-export const world = new World<Globals>({deltaTime: 0, size: {width: 0, height: 0}});
+export const world = new World<Globals>({
+  deltaTime: 0,
+  input: {accelerate: false, turnLeft: false, turnRight: false},
+  size: {width: 0, height: 0},
+});
 
 /* C O M P O N E N T S */
 
@@ -69,6 +74,33 @@ world.addSystem(
       const {vx, vy} = velocities.get(id);
       position.x += vx * dt;
       position.y += vy * dt;
+    }
+  },
+);
+
+// Let the player control player entities.
+world.addSystem(
+  'playerControl',
+  [player, rotation, velocity],
+  (world, entities, rotations, velocities) => {
+    const ACCELERATION = 0.1;
+    const MAX_VELOCITY = 3;
+    const TURN_SPEED = 0.05;
+    const {accelerate, turnLeft, turnRight} = world.globals.input;
+    for (const {id} of entities) {
+      const rotation = rotations.get(id);
+      rotation.delta = turnLeft !== turnRight ? (turnLeft ? -TURN_SPEED : TURN_SPEED) : 0;
+      // Accelerate the ship in its current direction up to a max velocity.
+      if (accelerate) {
+        const velocity = velocities.get(id);
+        const dx = Math.cos(rotation.angle) * ACCELERATION;
+        const dy = Math.sin(rotation.angle) * ACCELERATION;
+        [velocity.vx, velocity.vy] = limitVector(
+          velocity.vx + dx,
+          velocity.vy + dy,
+          MAX_VELOCITY,
+        );
+      }
     }
   },
 );
@@ -206,4 +238,15 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .with(rotation, -Math.PI / 2, 0)
     .with(velocity, vx, vy)
     .create();
+}
+
+/* U T I L I T I E S */
+
+function limitVector(x: number, y: number, maxLength: number) {
+  const length = Math.sqrt(x * x + y * y);
+  if (length > maxLength) {
+    const d = maxLength / length;
+    return [x * d, y * d];
+  }
+  return [x, y];
 }

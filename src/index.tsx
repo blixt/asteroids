@@ -17,4 +17,27 @@ for (let i = 0; i < 10; i++) {
   createAsteroid();
 }
 
+// Handle input.
+const handleKey = (e: KeyboardEvent) => {
+  switch (e.key) {
+    case 'ArrowDown':
+      break;
+    case 'ArrowLeft':
+      world.globals.input.turnLeft = e.type === 'keydown';
+      break;
+    case 'ArrowRight':
+      world.globals.input.turnRight = e.type === 'keydown';
+      break;
+    case 'ArrowUp':
+      world.globals.input.accelerate = e.type === 'keydown';
+      break;
+    default:
+      return;
+  }
+  e.preventDefault();
+};
+
+document.addEventListener('keydown', handleKey);
+document.addEventListener('keyup', handleKey);
+
 ReactDOM.render(<Viewport run={true} world={world} />, document.getElementById('root'));
