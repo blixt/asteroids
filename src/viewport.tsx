@@ -8,6 +8,7 @@ interface ViewportProps {
 }
 
 export default class Viewport extends React.Component<ViewportProps> {
+  private lastTs = 0;
   private ref = React.createRef<HTMLCanvasElement>();
   private running = false;
 
@@ -59,7 +60,16 @@ export default class Viewport extends React.Component<ViewportProps> {
   }
 
   private frame(ts: number) {
-    this.props.world.globals.deltaTime = 1;
+    let dt = 1;
+    if (ts) {
+      if (this.lastTs) {
+        dt = (ts - this.lastTs) / (1000 / 60);
+      }
+      this.lastTs = ts;
+    } else {
+      this.lastTs = 0;
+    }
+    this.props.world.globals.deltaTime = dt;
     this.props.world.step();
     if (this.running) {
       // TODO: Fix corner cases where this causes multiple rAF per frame.
