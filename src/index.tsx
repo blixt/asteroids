@@ -19,17 +19,18 @@ for (let i = 0; i < 10; i++) {
 
 // Handle input.
 const handleKey = (e: KeyboardEvent) => {
+  const isDown = e.type === 'keydown';
   switch (e.key) {
     case 'ArrowDown':
       break;
     case 'ArrowLeft':
-      world.globals.input.turnLeft = e.type === 'keydown';
+      world.globals.input.turnLeft = isDown;
       break;
     case 'ArrowRight':
-      world.globals.input.turnRight = e.type === 'keydown';
+      world.globals.input.turnRight = isDown;
       break;
     case 'ArrowUp':
-      world.globals.input.accelerate = e.type === 'keydown';
+      world.globals.input.accelerate = isDown;
       break;
     default:
       return;
