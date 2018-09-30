@@ -44,6 +44,10 @@ const rotation = world.addComponent('rotation', (angle: number, delta: number) =
   return {angle, delta};
 });
 
+const selfDestruct = world.addComponent('selfDestruct', (time: number) => {
+  return {age: 0, time};
+});
+
 const velocity = world.addComponent('velocity', (vx: number, vy: number) => ({vx, vy}));
 
 /* S Y S T E M S */
@@ -111,6 +115,17 @@ world.addSystem('rotate', [rotation], (world, entities, rotations) => {
   for (const {id} of entities) {
     const rotation = rotations.get(id);
     rotation.angle += (rotation.delta * dt) % TAU;
+  }
+});
+
+// Destroy objects after a certain time if they have the component.
+world.addSystem('selfDestruction', [selfDestruct], (world, entities, selfDestructors) => {
+  const dt = world.globals.deltaTime;
+  for (const {id} of entities) {
+    const selfDestructor = selfDestructors.get(id);
+    selfDestructor.age += dt;
+    if (selfDestructor.age < selfDestructor.time) continue;
+    world.destroyEntity(id);
   }
 });
 
