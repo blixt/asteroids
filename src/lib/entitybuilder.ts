@@ -1,10 +1,10 @@
 import World, {ComponentId, EntityId} from './world';
 
-export default class EntityBuilder<G> {
+export default class EntityBuilder<Globals> {
   private components? = new Map<ComponentId, any[]>();
-  private world?: World<G>;
+  private world?: World<Globals>;
 
-  constructor(world: World<G>) {
+  constructor(world: World<Globals>) {
     this.world = world;
   }
 
@@ -21,7 +21,7 @@ export default class EntityBuilder<G> {
     return this;
   }
 
-  with<P extends any[]>(component: ComponentId<P, any>, ...properties: P) {
+  with<Args extends any[]>(component: ComponentId<Args, any>, ...properties: Args) {
     if (!this.components || !this.world) throw Error('invalid builder use');
     this.components.set(component, properties);
     return this;

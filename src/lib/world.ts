@@ -1,110 +1,197 @@
 import EntityBuilder from './entitybuilder';
 
-type Merge<T extends any[], I> = ((_: I, ...t: T) => any) extends ((...m: infer M) => any)
-  ? M
-  : never;
-type Tuple<T> = (T[] & {'0': any}) | [];
+// This is an Entity Component System (ECS) engine.
 
-export type EntityId = number;
-
+// An ENTITY is a thing in the game world, with any number of components.
+// Examples: player avatar, asteroid, NPC
 interface Entity {
   id: EntityId;
+  // A bitmask of the components this entity has.
   mask: number;
 }
 
-type FactoryFn<P extends any[], D> = (...properties: P) => D;
-
-interface Storage<D> {
-  delete(id: EntityId): void;
-  get(id: EntityId): D | undefined;
-  set(id: EntityId, data: D): void;
-}
-
-interface ReadonlyStorage<D> {
-  get(id: EntityId): D;
-}
-
-interface Component<D = any> {
+// A COMPONENT represents a single aspect of an entity, and its associated data.
+// Examples: position, health, keyboard control
+interface Component<Args extends any[] = unknown[], Data = unknown> {
   bit: number;
-  factory?: FactoryFn<any[], D>;
-  storage?: Storage<D>;
+  factory?: FactoryFn<Args, Data>;
+  storage?: Storage<Data>;
 }
 
-type StepFn<G, D extends any[][]> = (
-  world: World<G>,
-  entities: Entity[],
-  ...data: D
-) => void;
-
-export interface ComponentId<P = any[], D = any> extends Symbol {}
-
-interface System<G> {
+// A SYSTEM is something that runs and updates one or more components.
+// Examples: gravity, burning, drawing the screen
+interface System<Globals> {
   components: ComponentId[];
   require: number;
   exclude: number;
-  step: StepFn<G, any[]>;
+  step: StepFn<Globals, AnyComponentId[]>;
 }
 
+// Refers to an individual entity in the world.
+// TODO: Make this id include generation.
+export type EntityId = number;
+
+// Refers to a component (the concept - not its storage) in the world.
+// Args is the argument list type of the function that creates the data of this component.
+// Data is the type of the data that gets stored in the storage for this component.
+export interface ComponentId<Args extends any[] = unknown[], Data = unknown>
+  extends Symbol {}
+
+// Refers to a system in the world.
 export interface SystemId extends Symbol {}
 
+// A marker type for differentating between undefined data and no storage.
+// (This type is never actually exposed to JavaScript in the form of a value.)
+type NoStorage = '__NO_STORAGE__';
+
+// The type of a function that can create data from a set of arguments (a component data factory).
+type FactoryFn<Args extends any[], Data> = (...args: Args) => Data;
+
+// The interface of a storage that contains all data for the entities with a specific component.
+// Different components need different types of storage. For example:
+// - Hash maps for sparse components (only few entities have this component)
+// - Regular arrays for dense components (almost every entity has this component)
+interface Storage<Data> {
+  delete(id: EntityId): void;
+  get(id: EntityId): Data | undefined;
+  set(id: EntityId, data: Data): void;
+}
+
+interface ReadonlyStorage<Data> {
+  get(id: EntityId): Data;
+}
+
+// Infers a tuple of storages for the provided set of component id types.
+type InferStorageTuple<Ids> = {
+  [K in keyof Ids]: Ids[K] extends AnyComponentId<any[], infer Data>
+    ? ReadonlyStorage<Data extends NoStorage ? NoStorage : Data>
+    : never
+};
+
+// A function that moves a system one step forward.
+// The rest arguments are the storages for components, skipping the components without storage.
+type StepFn<Globals, Ids extends AnyComponentId[]> = (
+  world: World<Globals>,
+  entities: Entity[],
+  // Infers the storages from the component ids, then drops the ones marked with NoStorage.
+  ...data: Drop<InferStorageTuple<Ids>, ReadonlyStorage<NoStorage>>
+) => void;
+
+// Modifiers allow more complex component filters for systems.
 interface Modifier extends Symbol {}
 
 const MAYBE: Modifier = Symbol('maybe');
-const NOT: Modifier = Symbol('not');
 
-type ModComponentId<P, D> = [Modifier, ComponentId<P, D>];
-type AnyComponentId<P = any[], D = any> = ComponentId<P, D> | ModComponentId<P, D>;
-
-// Use Maybe to also include entities that don't have this component. The data
-// array will contain `undefined` for entities that do not have the component.
-export function Maybe<P, D>(
-  component: ComponentId<P, D>,
-): ModComponentId<P, D | undefined> {
+// Include entities even if they don't have this component type, but if they have it, give us the data.
+// Example: Draw all entities with "polygon" and if they (MAYBE) have "rotation" also rotate them.
+// The storage will return `undefined` for entities that do not have the component.
+export function Maybe<Args extends any[], Data>(
+  component: ComponentId<Args, Data>,
+): ModComponentId<Args, Data | undefined> {
   return [MAYBE, component];
 }
 
-// Use Not to exclude all entities with this component.
-export function Not<P>(component: ComponentId<P, any>): ModComponentId<P, void> {
+const NOT: Modifier = Symbol('not');
+
+// Exclude entities with a certain component type.
+// Example: Damage all entities with "health" but NOT the ones tagged "invulnerable".
+export function Not<Args extends any[]>(
+  component: ComponentId<Args>,
+): ModComponentId<Args, NoStorage> {
   return [NOT, component];
 }
 
-// Infer a tuple of data lists from a tuple of typed ComponentIds.
-type InferStorage<T extends any[]> = {
-  0: [];
-  1: ((...t: T) => any) extends ((d: AnyComponentId<any, infer D>, ...u: infer U) => any)
-    ? (D extends void ? InferStorage<U> : Merge<InferStorage<U>, ReadonlyStorage<D>>)
-    : never;
-}[T extends [any, ...any[]] ? 1 : 0];
+// These additional types make it easier to accept both component ids and modifiers.
+type ModComponentId<Args extends any[], Data> = [Modifier, ComponentId<Args, Data>];
+type AnyComponentId<Args extends any[] = unknown[], Data = unknown> =
+  | ComponentId<Args, Data>
+  | ModComponentId<Args, Data>;
+// Convenience tuples that makes the addSystem overloads look cleaner.
+type AnyComponentId1 = [AnyComponentId];
+type AnyComponentId2 = [AnyComponentId, AnyComponentId];
+type AnyComponentId3 = [AnyComponentId, AnyComponentId, AnyComponentId];
+type AnyComponentId4 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
+type AnyComponentId5 = [
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId
+];
+type AnyComponentId6 = [
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId,
+  AnyComponentId
+];
 
-export default class World<G> {
+// The World class puts the three concepts entity, component, and system together.
+export default class World<Globals> {
   components = new Map<ComponentId, Component>();
   entities: (Entity | null)[] = [];
-  globals: G;
-  systems = new Map<SystemId, System<G>>();
+  globals: Globals;
+  systems = new Map<SystemId, System<Globals>>();
 
   private entitiesIndex = new Map<string, Entity[]>();
   private entitiesToDestroy = new Set<number>();
 
-  constructor(globals: G) {
+  constructor(globals: Globals) {
     this.globals = globals;
   }
 
-  addComponent<P extends any[], D = void>(name: string, factory?: FactoryFn<P, D>) {
-    const component: Component<D> = {bit: 1 << this.components.size};
+  addComponent<Args extends any[], Data = NoStorage>(
+    name: string,
+    factory?: FactoryFn<Args, Data>,
+  ) {
+    const component: Component<Args, Data> = {bit: 1 << this.components.size};
     if (factory) {
       component.factory = factory;
       component.storage = new Map();
     }
-    const id: ComponentId<P, D> = Symbol(`${name} component`);
-    this.components.set(id, component);
+    const id: ComponentId<Args, Data> = Symbol(`${name} component`);
+    // TODO: Figure out what's needed to not have to cast below.
+    this.components.set(id, component as Component);
     return id;
   }
 
-  addSystem<T extends Tuple<AnyComponentId>>(
+  addSystem<Ids extends []>(
     name: string,
-    components: T,
-    step: StepFn<G, InferStorage<T>>,
-  ) {
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId1>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId2>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId3>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId4>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId5>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem<Ids extends AnyComponentId6>(
+    name: string,
+    components: Ids,
+    step: StepFn<Globals, Ids>,
+  ): void;
+  addSystem(name: string, components: any[], step: StepFn<Globals, any>) {
     const [componentIds, require, exclude] = this.resolveAnyComponentIds(components);
     const id: SystemId = Symbol(`${name} system`);
     this.systems.set(id, {components: componentIds, require, exclude, step});
@@ -151,7 +238,7 @@ export default class World<G> {
   }
 
   entity() {
-    return new EntityBuilder<G>(this);
+    return new EntityBuilder<Globals>(this);
   }
 
   hasComponent(entity: Entity, componentId: ComponentId): boolean {
@@ -256,3 +343,19 @@ export default class World<G> {
     return [componentIds, require, exclude];
   }
 }
+
+// Adds type V to the start of tuple T.
+type Unshift<T extends any[], V> = ((_: V, ...t: T) => any) extends ((
+  ...m: infer M
+) => any)
+  ? M
+  : never;
+
+// Drops any value that extends X in tuple T.
+// TODO: Try to get rid of this recursive type.
+type Drop<T extends any[], X> = {
+  0: T;
+  1: ((...t: T) => any) extends ((h: infer H, ...R: infer R) => any)
+    ? (H extends X ? Drop<R, X> : Unshift<Drop<R, X>, H>)
+    : never;
+}[T extends [any, ...any[]] ? 1 : 0];
