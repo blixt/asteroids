@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useEffect, useRef } from "react";
 import { GameWorld } from "./game";
 
 interface ViewportProps {
@@ -6,68 +7,59 @@ interface ViewportProps {
   world: GameWorld;
 }
 
-export default class Viewport extends React.Component<ViewportProps> {
-  private lastTs = 0;
-  private ref = React.createRef<HTMLCanvasElement>();
-  private running = false;
+export function Viewport({ run, world }: ViewportProps) {
+  const { width, height } = world.globals.size;
+  const ref = useRef<HTMLCanvasElement>(null);
 
-  constructor(props: ViewportProps) {
-    super(props);
-    this.frame = this.frame.bind(this);
-  }
+  // Handle retina screens.
+  const dpr = window.devicePixelRatio || 1;
 
-  componentDidMount() {
-    if (!this.ref.current) return;
-    const context = this.ref.current.getContext("2d");
+  useEffect(() => {
+    if (!run || !ref.current) return;
+
+    const context = ref.current.getContext("2d");
     if (!context) return;
-    // Handle retina screens.
-    const dpr = window.devicePixelRatio || 1;
+
+    // Communicate the canvas context to the world.
+    world.globals.context = context;
+
+    // Set up context for retina screens.
     context.scale(dpr, dpr);
-    this.props.world.globals.context = context;
-    if (this.props.run) {
-      this.running = true;
-      this.frame(0);
-    }
-  }
 
-  componentDidUpdate() {
-    if (this.props.run && !this.running) {
-      this.running = true;
-      this.frame(0);
-    }
-  }
+    let lastTS = 0;
+    // As long as this is true, we'll keep rendering the next frame.
+    let scheduleNextFrame = true;
 
-  componentWillUnmount() {
-    this.props.world.globals.context = undefined;
-    this.running = false;
-  }
-
-  render() {
-    const { width, height } = this.props.world.globals.size;
-    // Handle retina screens.
-    const dpr = window.devicePixelRatio || 1;
-    return (
-      <div className="viewport">
-        <canvas ref={this.ref} width={width * dpr} height={height * dpr} style={{ width, height }} />
-      </div>
-    );
-  }
-
-  private frame(ts: number) {
-    let dt = 1;
-    if (ts) {
-      if (ts - this.lastTs < 250) {
-        dt = (ts - this.lastTs) / (1000 / 60);
+    function frame(ts: number) {
+      let dt = 1;
+      if (ts) {
+        if (ts - lastTS < 250) {
+          dt = (ts - lastTS) / (1000 / 60);
+        }
+        lastTS = ts;
+      } else {
+        lastTS = 0;
       }
-      this.lastTs = ts;
-    } else {
-      this.lastTs = 0;
+      world.globals.deltaTime = dt;
+      world.step();
+      if (scheduleNextFrame) {
+        // TODO: Fix corner cases where this causes multiple rAF per frame.
+        requestAnimationFrame(frame);
+      }
     }
-    this.props.world.globals.deltaTime = dt;
-    this.props.world.step();
-    if (this.running) {
-      // TODO: Fix corner cases where this causes multiple rAF per frame.
-      requestAnimationFrame(this.frame);
-    }
-  }
+
+    // Kick off the render loop.
+    frame(0);
+
+    return () => {
+      world.globals.context = undefined;
+      scheduleNextFrame = false;
+    };
+  }, [dpr, run, world]);
+
+  return (
+    <div className="viewport">
+      <canvas ref={ref} width={width * dpr} height={height * dpr} style={{ width, height }} />
+    </div>
+  );
 }
