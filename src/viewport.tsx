@@ -19,6 +19,7 @@ export function Viewport({ run, world }: ViewportProps) {
 
     const context = ref.current.getContext("2d");
     if (!context) return;
+    context.save();
 
     // Communicate the canvas context to the world.
     world.globals.context = context;
@@ -54,6 +55,7 @@ export function Viewport({ run, world }: ViewportProps) {
     return () => {
       world.globals.context = undefined;
       scheduleNextFrame = false;
+      context.restore();
     };
   }, [dpr, run, world]);
 

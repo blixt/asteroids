@@ -164,7 +164,8 @@ world.addSystem("shooting", [position, rotation, shooter], (world, entities, pos
 
 // Clear the screen every frame.
 world.addSystem("clearScreen", [], (world, entities) => {
-  const ctx = world.globals.context!;
+  const ctx = world.globals.context;
+  if (!ctx) return;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 });
 
@@ -173,7 +174,8 @@ world.addSystem(
   "drawPolys",
   [polygon, position, Maybe(rotation)],
   (world, entities, polygons, positions, rotations) => {
-    const ctx = world.globals.context!;
+    const ctx = world.globals.context;
+    if (!ctx) return;
     for (const { id } of entities) {
       const { options, points } = polygons.get(id);
       const { x, y } = positions.get(id);
