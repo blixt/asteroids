@@ -1,5 +1,4 @@
 import * as React from "react";
-
 import { GameWorld } from "./game";
 
 interface ViewportProps {

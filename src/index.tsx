@@ -1,10 +1,8 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-
 import { createAsteroid, createPlayer, world } from "./game";
-import Viewport from "./Viewport";
-
 import "./index.css";
+import Viewport from "./Viewport";
 
 const size = { width: 270, height: 480 };
 world.globals.size = size;
