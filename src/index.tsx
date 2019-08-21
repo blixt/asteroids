@@ -1,16 +1,16 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 
-import {createAsteroid, createPlayer, world} from './game';
-import Viewport from './Viewport';
+import { createAsteroid, createPlayer, world } from "./game";
+import Viewport from "./Viewport";
 
-import './index.css';
+import "./index.css";
 
-const size = {width: 270, height: 480};
+const size = { width: 270, height: 480 };
 world.globals.size = size;
 
 // Create the player.
-createPlayer(size.width / 2, size.height + 10, {vy: -10});
+createPlayer(size.width / 2, size.height + 10, { vy: -10 });
 
 // Create some asteroids.
 for (let i = 0; i < 10; i++) {
@@ -19,20 +19,20 @@ for (let i = 0; i < 10; i++) {
 
 // Handle input.
 const handleKey = (e: KeyboardEvent) => {
-  const isDown = e.type === 'keydown';
+  const isDown = e.type === "keydown";
   switch (e.key) {
-    case 'ArrowDown':
+    case "ArrowDown":
       break;
-    case 'ArrowLeft':
+    case "ArrowLeft":
       world.globals.input.turnLeft = isDown;
       break;
-    case 'ArrowRight':
+    case "ArrowRight":
       world.globals.input.turnRight = isDown;
       break;
-    case 'ArrowUp':
+    case "ArrowUp":
       world.globals.input.accelerate = isDown;
       break;
-    case ' ':
+    case " ":
       world.globals.input.shoot = isDown;
       break;
     default:
@@ -41,7 +41,7 @@ const handleKey = (e: KeyboardEvent) => {
   e.preventDefault();
 };
 
-document.addEventListener('keydown', handleKey);
-document.addEventListener('keyup', handleKey);
+document.addEventListener("keydown", handleKey);
+document.addEventListener("keyup", handleKey);
 
-ReactDOM.render(<Viewport run={true} world={world} />, document.getElementById('root'));
+ReactDOM.render(<Viewport run={true} world={world} />, document.getElementById("root"));

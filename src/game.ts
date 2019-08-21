@@ -1,29 +1,29 @@
-import World, {Maybe} from './lib/world';
+import World, { Maybe } from "./lib/world";
 
 interface Globals {
   context?: CanvasRenderingContext2D;
   deltaTime: number;
-  input: {accelerate: boolean; shoot: boolean; turnLeft: boolean; turnRight: boolean};
-  size: {width: number; height: number};
+  input: { accelerate: boolean; shoot: boolean; turnLeft: boolean; turnRight: boolean };
+  size: { width: number; height: number };
 }
 
 export type GameWorld = World<Globals>;
 
 export const world = new World<Globals>({
   deltaTime: 0,
-  input: {accelerate: false, shoot: false, turnLeft: false, turnRight: false},
-  size: {width: 0, height: 0},
+  input: { accelerate: false, shoot: false, turnLeft: false, turnRight: false },
+  size: { width: 0, height: 0 }
 });
 
 /* C O M P O N E N T S */
 
 // Tag components:
-const asteroid = world.addComponent('asteroid');
-const player = world.addComponent('player');
-const wrapsAround = world.addComponent('wrapsAround');
+const asteroid = world.addComponent("asteroid");
+const player = world.addComponent("player");
+const wrapsAround = world.addComponent("wrapsAround");
 
 // Data components:
-const friction = world.addComponent('friction', (amount: number) => ({amount}));
+const friction = world.addComponent("friction", (amount: number) => ({ amount }));
 
 interface PolygonOptions {
   fillStyle?: string;
@@ -31,110 +31,89 @@ interface PolygonOptions {
   strokeStyle?: string;
 }
 
-const polygon = world.addComponent(
-  'polygon',
-  (options: PolygonOptions, ...points: [number, number][]) => {
-    return {options, points};
-  },
-);
-
-const position = world.addComponent('position', (x: number, y: number) => ({x, y}));
-
-const rotation = world.addComponent('rotation', (angle: number, delta: number) => {
-  return {angle, delta};
+const polygon = world.addComponent("polygon", (options: PolygonOptions, ...points: [number, number][]) => {
+  return { options, points };
 });
 
-const selfDestruct = world.addComponent('selfDestruct', (time: number) => {
-  return {age: 0, time};
+const position = world.addComponent("position", (x: number, y: number) => ({ x, y }));
+
+const rotation = world.addComponent("rotation", (angle: number, delta: number) => {
+  return { angle, delta };
 });
 
-const shooter = world.addComponent(
-  'shooter',
-  (rate: number, shooting: boolean = false) => {
-    return {cooldown: 0, rate, shooting};
-  },
-);
+const selfDestruct = world.addComponent("selfDestruct", (time: number) => {
+  return { age: 0, time };
+});
 
-const velocity = world.addComponent('velocity', (vx: number, vy: number) => ({vx, vy}));
+const shooter = world.addComponent("shooter", (rate: number, shooting: boolean = false) => {
+  return { cooldown: 0, rate, shooting };
+});
+
+const velocity = world.addComponent("velocity", (vx: number, vy: number) => ({ vx, vy }));
 
 /* S Y S T E M S */
 
 // Make objects with velocity slow down over time.
-world.addSystem(
-  'friction',
-  [friction, velocity],
-  (world, entities, frictions, velocities) => {
-    const dt = world.globals.deltaTime;
-    for (const {id} of entities) {
-      const {amount} = frictions.get(id);
-      const velocity = velocities.get(id);
-      velocity.vx *= 1 - amount * dt;
-      velocity.vy *= 1 - amount * dt;
-    }
-  },
-);
+world.addSystem("friction", [friction, velocity], (world, entities, frictions, velocities) => {
+  const dt = world.globals.deltaTime;
+  for (const { id } of entities) {
+    const { amount } = frictions.get(id);
+    const velocity = velocities.get(id);
+    velocity.vx *= 1 - amount * dt;
+    velocity.vy *= 1 - amount * dt;
+  }
+});
 
 // Wrap objects that move outside the screen area around to the other side.
-world.addSystem(
-  'wrap',
-  [wrapsAround, position, velocity],
-  (world, entities, positions, velocities) => {
-    // TODO: Handle extreme cases where objects should wrap 2+ times.
-    const dt = world.globals.deltaTime;
-    const {width, height} = world.globals.size;
-    const padding = 30;
-    // Returns a 2-bit mask for outside horizontally/vertically.
-    function outside(x: number, y: number) {
-      return (
-        (x < -padding || x >= width + padding ? 1 : 0) |
-        (y < -padding || y >= height + padding ? 2 : 0)
-      );
+world.addSystem("wrap", [wrapsAround, position, velocity], (world, entities, positions, velocities) => {
+  // TODO: Handle extreme cases where objects should wrap 2+ times.
+  const dt = world.globals.deltaTime;
+  const { width, height } = world.globals.size;
+  const padding = 30;
+  // Returns a 2-bit mask for outside horizontally/vertically.
+  function outside(x: number, y: number) {
+    return (x < -padding || x >= width + padding ? 1 : 0) | (y < -padding || y >= height + padding ? 2 : 0);
+  }
+  for (const { id } of entities) {
+    const position = positions.get(id);
+    const { vx, vy } = velocities.get(id);
+    if (outside(position.x, position.y)) {
+      // Ignore objects that were already outside the wrapping area.
+      continue;
     }
-    for (const {id} of entities) {
-      const position = positions.get(id);
-      const {vx, vy} = velocities.get(id);
-      if (outside(position.x, position.y)) {
-        // Ignore objects that were already outside the wrapping area.
-        continue;
-      }
-      const outsideAfterMoving = outside(position.x + vx * dt, position.y + vy * dt);
-      if (outsideAfterMoving & 1) {
-        // Wrap objects horizontally.
-        position.x += vx < 0 ? padding + width + padding : -(padding + width + padding);
-      }
-      if (outsideAfterMoving & 2) {
-        // Wrap objects vertically.
-        position.y += vy < 0 ? padding + height + padding : -(padding + height + padding);
-      }
+    const outsideAfterMoving = outside(position.x + vx * dt, position.y + vy * dt);
+    if (outsideAfterMoving & 1) {
+      // Wrap objects horizontally.
+      position.x += vx < 0 ? padding + width + padding : -(padding + width + padding);
     }
-  },
-);
+    if (outsideAfterMoving & 2) {
+      // Wrap objects vertically.
+      position.y += vy < 0 ? padding + height + padding : -(padding + height + padding);
+    }
+  }
+});
 
 // Make objects with position and velocity move.
-world.addSystem(
-  'move',
-  [position, velocity],
-  (world, entities, positions, velocities) => {
-    const dt = world.globals.deltaTime;
-    for (const {id} of entities) {
-      const position = positions.get(id);
-      const {vx, vy} = velocities.get(id);
-      position.x += vx * dt;
-      position.y += vy * dt;
-    }
-  },
-);
+world.addSystem("move", [position, velocity], (world, entities, positions, velocities) => {
+  const dt = world.globals.deltaTime;
+  for (const { id } of entities) {
+    const position = positions.get(id);
+    const { vx, vy } = velocities.get(id);
+    position.x += vx * dt;
+    position.y += vy * dt;
+  }
+});
 
 // Let the player control player entities.
 world.addSystem(
-  'playerControl',
+  "playerControl",
   [player, rotation, shooter, velocity],
   (world, entities, rotations, shooters, velocities) => {
     const ACCELERATION = 0.1;
     const MAX_VELOCITY = 3;
     const TURN_SPEED = 0.05;
-    const {accelerate, shoot, turnLeft, turnRight} = world.globals.input;
-    for (const {id} of entities) {
+    const { accelerate, shoot, turnLeft, turnRight } = world.globals.input;
+    for (const { id } of entities) {
       const rotation = rotations.get(id);
       rotation.delta = turnLeft !== turnRight ? (turnLeft ? -TURN_SPEED : TURN_SPEED) : 0;
       // Accelerate the ship in its current direction up to a max velocity.
@@ -142,30 +121,26 @@ world.addSystem(
         const velocity = velocities.get(id);
         const dx = Math.cos(rotation.angle) * ACCELERATION;
         const dy = Math.sin(rotation.angle) * ACCELERATION;
-        [velocity.vx, velocity.vy] = limitVector(
-          velocity.vx + dx,
-          velocity.vy + dy,
-          MAX_VELOCITY,
-        );
+        [velocity.vx, velocity.vy] = limitVector(velocity.vx + dx, velocity.vy + dy, MAX_VELOCITY);
       }
       shooters.get(id).shooting = shoot;
     }
-  },
+  }
 );
 
 // Make objects rotate.
-world.addSystem('rotate', [rotation], (world, entities, rotations) => {
+world.addSystem("rotate", [rotation], (world, entities, rotations) => {
   const dt = world.globals.deltaTime;
-  for (const {id} of entities) {
+  for (const { id } of entities) {
     const rotation = rotations.get(id);
     rotation.angle += (rotation.delta * dt) % TAU;
   }
 });
 
 // Destroy objects after a certain time if they have the component.
-world.addSystem('selfDestruction', [selfDestruct], (world, entities, selfDestructors) => {
+world.addSystem("selfDestruction", [selfDestruct], (world, entities, selfDestructors) => {
   const dt = world.globals.deltaTime;
-  for (const {id} of entities) {
+  for (const { id } of entities) {
     const selfDestructor = selfDestructors.get(id);
     selfDestructor.age += dt;
     if (selfDestructor.age < selfDestructor.time) continue;
@@ -174,38 +149,34 @@ world.addSystem('selfDestruction', [selfDestruct], (world, entities, selfDestruc
 });
 
 // Allow objects to shoot projectiles.
-world.addSystem(
-  'shooting',
-  [position, rotation, shooter],
-  (world, entities, positions, rotations, shooters) => {
-    const dt = world.globals.deltaTime;
-    for (const {id} of entities) {
-      const {x, y} = positions.get(id);
-      const {angle} = rotations.get(id);
-      const shooter = shooters.get(id);
-      shooter.cooldown = Math.max(shooter.cooldown - dt, 0);
-      if (!shooter.shooting || shooter.cooldown > 0) continue;
-      shooter.cooldown = shooter.rate;
-      createProjectile(x, y, angle, 5);
-    }
-  },
-);
+world.addSystem("shooting", [position, rotation, shooter], (world, entities, positions, rotations, shooters) => {
+  const dt = world.globals.deltaTime;
+  for (const { id } of entities) {
+    const { x, y } = positions.get(id);
+    const { angle } = rotations.get(id);
+    const shooter = shooters.get(id);
+    shooter.cooldown = Math.max(shooter.cooldown - dt, 0);
+    if (!shooter.shooting || shooter.cooldown > 0) continue;
+    shooter.cooldown = shooter.rate;
+    createProjectile(x, y, angle, 5);
+  }
+});
 
 // Clear the screen every frame.
-world.addSystem('clearScreen', [], (world, entities) => {
+world.addSystem("clearScreen", [], (world, entities) => {
   const ctx = world.globals.context!;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 });
 
 // Draw all polygons on screen.
 world.addSystem(
-  'drawPolys',
+  "drawPolys",
   [polygon, position, Maybe(rotation)],
   (world, entities, polygons, positions, rotations) => {
     const ctx = world.globals.context!;
-    for (const {id} of entities) {
-      const {options, points} = polygons.get(id);
-      const {x, y} = positions.get(id);
+    for (const { id } of entities) {
+      const { options, points } = polygons.get(id);
+      const { x, y } = positions.get(id);
       const rotation = rotations.get(id);
       ctx.save();
       ctx.translate(x, y);
@@ -229,7 +200,7 @@ world.addSystem(
       }
       ctx.restore();
     }
-  },
+  }
 );
 
 /* E N T I T Y   C R E A T I O N */
@@ -264,19 +235,19 @@ export function createAsteroid() {
   return world
     .entity()
     .tagged(asteroid, wrapsAround)
-    .with(polygon, {lineWidth: 1.5, strokeStyle: '#eec'}, ...points)
+    .with(polygon, { lineWidth: 1.5, strokeStyle: "#eec" }, ...points)
     .with(position, x, y)
     .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
     .with(velocity, vx, vy)
     .create();
 }
 
-export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
+export function createPlayer(x: number, y: number, { vx = 0, vy = 0 } = {}) {
   return world
     .entity()
     .tagged(player, wrapsAround)
     .with(friction, 0.04)
-    .with(polygon, {strokeStyle: '#0f0'}, [9, 0], [-9, 8], [-6, 0], [-9, -8])
+    .with(polygon, { strokeStyle: "#0f0" }, [9, 0], [-9, 8], [-6, 0], [-9, -8])
     .with(position, x, y)
     .with(rotation, -Math.PI / 2, 0)
     .with(shooter, 10)
@@ -284,16 +255,10 @@ export function createPlayer(x: number, y: number, {vx = 0, vy = 0} = {}) {
     .create();
 }
 
-function createProjectile(
-  x: number,
-  y: number,
-  direction: number,
-  speed: number,
-  offset: number = 10,
-) {
+function createProjectile(x: number, y: number, direction: number, speed: number, offset: number = 10) {
   return world
     .entity()
-    .with(polygon, {fillStyle: '#ff0'}, [2, 0], [-2, 1], [-2, -1])
+    .with(polygon, { fillStyle: "#ff0" }, [2, 0], [-2, 1], [-2, -1])
     .with(position, x + Math.cos(direction) * offset, y + Math.sin(direction) * offset)
     .with(rotation, direction, 0)
     .with(selfDestruct, 50)

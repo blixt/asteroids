@@ -1,4 +1,4 @@
-import EntityBuilder from './entitybuilder';
+import EntityBuilder from "./entitybuilder";
 
 // This is an Entity Component System (ECS) engine.
 
@@ -34,15 +34,14 @@ export type EntityId = number;
 // Refers to a component (the concept - not its storage) in the world.
 // Args is the argument list type of the function that creates the data of this component.
 // Data is the type of the data that gets stored in the storage for this component.
-export interface ComponentId<Args extends any[] = unknown[], Data = unknown>
-  extends Symbol {}
+export interface ComponentId<Args extends any[] = unknown[], Data = unknown> extends Symbol {}
 
 // Refers to a system in the world.
 export interface SystemId extends Symbol {}
 
 // A marker type for differentating between undefined data and no storage.
 // (This type is never actually exposed to JavaScript in the form of a value.)
-type NoStorage = '__NO_STORAGE__';
+type NoStorage = "__NO_STORAGE__";
 
 // The type of a function that can create data from a set of arguments (a component data factory).
 type FactoryFn<Args extends any[], Data> = (...args: Args) => Data;
@@ -80,24 +79,22 @@ type StepFn<Globals, Ids extends AnyComponentId[]> = (
 // Modifiers allow more complex component filters for systems.
 interface Modifier extends Symbol {}
 
-const MAYBE: Modifier = Symbol('maybe');
+const MAYBE: Modifier = Symbol("maybe");
 
 // Include entities even if they don't have this component type, but if they have it, give us the data.
 // Example: Draw all entities with "polygon" and if they (MAYBE) have "rotation" also rotate them.
 // The storage will return `undefined` for entities that do not have the component.
 export function Maybe<Args extends any[], Data>(
-  component: ComponentId<Args, Data>,
+  component: ComponentId<Args, Data>
 ): ModComponentId<Args, Data | undefined> {
   return [MAYBE, component];
 }
 
-const NOT: Modifier = Symbol('not');
+const NOT: Modifier = Symbol("not");
 
 // Exclude entities with a certain component type.
 // Example: Damage all entities with "health" but NOT the ones tagged "invulnerable".
-export function Not<Args extends any[]>(
-  component: ComponentId<Args>,
-): ModComponentId<Args, NoStorage> {
+export function Not<Args extends any[]>(component: ComponentId<Args>): ModComponentId<Args, NoStorage> {
   return [NOT, component];
 }
 
@@ -111,21 +108,8 @@ type AnyComponentId1 = [AnyComponentId];
 type AnyComponentId2 = [AnyComponentId, AnyComponentId];
 type AnyComponentId3 = [AnyComponentId, AnyComponentId, AnyComponentId];
 type AnyComponentId4 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
-type AnyComponentId5 = [
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId
-];
-type AnyComponentId6 = [
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId,
-  AnyComponentId
-];
+type AnyComponentId5 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
+type AnyComponentId6 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
 
 // The World class puts the three concepts entity, component, and system together.
 export default class World<Globals> {
@@ -141,11 +125,8 @@ export default class World<Globals> {
     this.globals = globals;
   }
 
-  addComponent<Args extends any[], Data = NoStorage>(
-    name: string,
-    factory?: FactoryFn<Args, Data>,
-  ) {
-    const component: Component<Args, Data> = {bit: 1 << this.components.size};
+  addComponent<Args extends any[], Data = NoStorage>(name: string, factory?: FactoryFn<Args, Data>) {
+    const component: Component<Args, Data> = { bit: 1 << this.components.size };
     if (factory) {
       component.factory = factory;
       component.storage = new Map();
@@ -156,45 +137,17 @@ export default class World<Globals> {
     return id;
   }
 
-  addSystem<Ids extends []>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId1>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId2>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId3>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId4>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId5>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
-  addSystem<Ids extends AnyComponentId6>(
-    name: string,
-    components: Ids,
-    step: StepFn<Globals, Ids>,
-  ): void;
+  addSystem<Ids extends []>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId1>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId2>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId3>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId4>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId5>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
+  addSystem<Ids extends AnyComponentId6>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
   addSystem(name: string, components: any[], step: StepFn<Globals, any>) {
     const [componentIds, require, exclude] = this.resolveAnyComponentIds(components);
     const id: SystemId = Symbol(`${name} system`);
-    this.systems.set(id, {components: componentIds, require, exclude, step});
+    this.systems.set(id, { components: componentIds, require, exclude, step });
     return id;
   }
 
@@ -215,19 +168,14 @@ export default class World<Globals> {
         component.storage.set(id, component.factory(...properties));
       }
     }
-    const entity = {id, mask};
+    const entity = { id, mask };
     this.entities.push(entity);
     // Update existing indexes.
     for (const [indexKey, indexList] of this.entitiesIndex) {
-      const [require, exclude] = indexKey.split('-').map(parseInt);
+      const [require, exclude] = indexKey.split("-").map(parseInt);
       if ((mask & require) !== require || mask & exclude) continue;
       indexList.push(entity);
-      console.log(
-        'Added entity %d to index for filter %s (new count: %d)',
-        id,
-        indexKey,
-        indexList.length,
-      );
+      console.log("Added entity %d to index for filter %s (new count: %d)", id, indexKey, indexList.length);
     }
     // Just expose the id of the entity object.
     return id;
@@ -264,7 +212,7 @@ export default class World<Globals> {
       const storageList = [];
       for (const componentId of system.components) {
         const component = this.components.get(componentId);
-        if (!component) throw Error('internal state error');
+        if (!component) throw Error("internal state error");
         const storage = component.storage;
         if (!storage) {
           // This is a tag component so it has no data. No need to waste cycles.
@@ -281,11 +229,9 @@ export default class World<Globals> {
     const indexKey = `${require}-${exclude}`;
     const cachedEntities = this.entitiesIndex.get(indexKey);
     if (cachedEntities) return cachedEntities;
-    const entities = this.entities.filter(
-      e => e && (e.mask & require) === require && !(e.mask & exclude),
-    ) as Entity[];
+    const entities = this.entities.filter(e => e && (e.mask & require) === require && !(e.mask & exclude)) as Entity[];
     this.entitiesIndex.set(indexKey, entities);
-    console.log('Built index for filter %s (count: %d)', indexKey, entities.length);
+    console.log("Built index for filter %s (count: %d)", indexKey, entities.length);
     return entities;
   }
 
@@ -296,25 +242,20 @@ export default class World<Globals> {
     for (const component of this.components.values()) {
       if (!component.storage) continue;
       for (const id of this.entitiesToDestroy) {
-        const {mask} = this.entities[id]!;
+        const { mask } = this.entities[id]!;
         if (!(mask & component.bit)) continue;
         component.storage.delete(id);
       }
     }
     // Update indexes.
     for (const [indexKey, indexList] of this.entitiesIndex) {
-      const [require, exclude] = indexKey.split('-').map(parseInt);
+      const [require, exclude] = indexKey.split("-").map(parseInt);
       for (const id of this.entitiesToDestroy) {
         const entity = this.entities[id]!;
         if ((entity.mask & require) !== require || entity.mask & exclude) continue;
         const i = indexList.indexOf(entity);
         indexList.splice(i, 1);
-        console.log(
-          'Removed entity %d from index for filter %s (new count: %d)',
-          id,
-          indexKey,
-          indexList.length,
-        );
+        console.log("Removed entity %d from index for filter %s (new count: %d)", id, indexKey, indexList.length);
       }
     }
     // Make entity ids unused.
@@ -345,11 +286,7 @@ export default class World<Globals> {
 }
 
 // Adds type V to the start of tuple T.
-type Unshift<T extends any[], V> = ((_: V, ...t: T) => any) extends ((
-  ...m: infer M
-) => any)
-  ? M
-  : never;
+type Unshift<T extends any[], V> = ((_: V, ...t: T) => any) extends ((...m: infer M) => any) ? M : never;
 
 // Drops any value that extends X in tuple T.
 // TODO: Try to get rid of this recursive type.

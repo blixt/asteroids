@@ -1,6 +1,6 @@
-import * as React from 'react';
+import * as React from "react";
 
-import {GameWorld} from './game';
+import { GameWorld } from "./game";
 
 interface ViewportProps {
   run: boolean;
@@ -19,7 +19,7 @@ export default class Viewport extends React.Component<ViewportProps> {
 
   componentDidMount() {
     if (!this.ref.current) return;
-    const context = this.ref.current.getContext('2d');
+    const context = this.ref.current.getContext("2d");
     if (!context) return;
     // Handle retina screens.
     const dpr = window.devicePixelRatio || 1;
@@ -44,17 +44,12 @@ export default class Viewport extends React.Component<ViewportProps> {
   }
 
   render() {
-    const {width, height} = this.props.world.globals.size;
+    const { width, height } = this.props.world.globals.size;
     // Handle retina screens.
     const dpr = window.devicePixelRatio || 1;
     return (
       <div className="viewport">
-        <canvas
-          ref={this.ref}
-          width={width * dpr}
-          height={height * dpr}
-          style={{width, height}}
-        />
+        <canvas ref={this.ref} width={width * dpr} height={height * dpr} style={{ width, height }} />
       </div>
     );
   }
