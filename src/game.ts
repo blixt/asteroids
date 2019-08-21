@@ -107,8 +107,8 @@ world.addSystem("move", [position, velocity], (world, entities, positions, veloc
 // Let the player control player entities.
 world.addSystem(
   "playerControl",
-  [player, rotation, shooter, velocity],
-  (world, entities, rotations, shooters, velocities) => {
+  [player, rotation, velocity, Maybe(shooter)],
+  (world, entities, rotations, velocities, shooters) => {
     const ACCELERATION = 0.1;
     const MAX_VELOCITY = 3;
     const TURN_SPEED = 0.05;
@@ -123,7 +123,8 @@ world.addSystem(
         const dy = Math.sin(rotation.angle) * ACCELERATION;
         [velocity.vx, velocity.vy] = limitVector(velocity.vx + dx, velocity.vy + dy, MAX_VELOCITY);
       }
-      shooters.get(id).shooting = shoot;
+      const shooter = shooters.get(id);
+      if (shooter) shooter.shooting = shoot;
     }
   }
 );
