@@ -17,7 +17,7 @@ export const world = new World<Globals>({
 
 /* C O M P O N E N T S */
 
-const asteroid = world.addComponent("asteroid");
+const asteroid = world.addComponent("asteroid", (timesExploded: number = 0) => ({ exploding: false, timesExploded }));
 const player = world.addComponent("player");
 const wrapsAround = world.addComponent("wrapsAround");
 
@@ -50,6 +50,35 @@ const shooter = world.addComponent("shooter", (rate: number, shooting: boolean =
 const velocity = world.addComponent("velocity", (vx: number, vy: number) => ({ vx, vy }));
 
 /* S Y S T E M S */
+
+world.addSystem("explodingAsteroids", [asteroid, position], (world, entities, asteroids, positions) => {
+  for (const { id } of entities) {
+    // Check if asteroid is exploding, and skip it if it isn't.
+    const { exploding, timesExploded } = asteroids.get(id);
+    if (!exploding) continue;
+    // Remove this asteroid instance from the world.
+    world.destroyEntity(id);
+    // Don't explode infinitely.
+    if (timesExploded >= 2) continue;
+    // Create smaller fragments.
+    const { x, y } = positions.get(id);
+    const NUM_FRAGMENTS = 3;
+    let angle = (Math.random() * TAU) / NUM_FRAGMENTS;
+    const size = 10 / (timesExploded + 1);
+    const radius = size * 2;
+    for (let i = 0; i < NUM_FRAGMENTS; i++) {
+      createAsteroid(
+        x + Math.cos(angle) * radius,
+        y + Math.sin(angle) * radius,
+        Math.cos(angle),
+        Math.sin(angle),
+        size,
+        timesExploded + 1
+      );
+      angle += TAU / NUM_FRAGMENTS;
+    }
+  }
+});
 
 // Make objects with velocity slow down over time.
 world.addSystem("friction", [friction, velocity], (world, entities, frictions, velocities) => {
