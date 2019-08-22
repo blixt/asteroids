@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { createAsteroid, createPlayer, world } from "./game";
+import { createPlayer, createRandomAsteroid, world } from "./game";
 import "./index.css";
 import { Viewport } from "./Viewport";
 
@@ -12,7 +12,7 @@ createPlayer(size.width / 2, size.height + 10, { vy: -10 });
 
 // Create some asteroids.
 for (let i = 0; i < 10; i++) {
-  createAsteroid();
+  createRandomAsteroid();
 }
 
 // Handle input.

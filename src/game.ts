@@ -208,7 +208,27 @@ world.addSystem(
 
 const TAU = Math.PI * 2;
 
-export function createAsteroid() {
+function createAsteroid(x: number, y: number, vx: number, vy: number, size: number, timesExploded?: number) {
+  // Create a list of points for the asteroid.
+  const points: [number, number][] = [];
+  for (let a = 0; a < TAU; a += TAU / 12) {
+    // Vary the point distance from the center of the asteroid.
+    const variation = Math.random() * 8;
+    // Add the point to the list of polygon points.
+    points.push([Math.cos(a) * (size + variation), Math.sin(a) * (size + variation)]);
+  }
+  return world
+    .entity()
+    .with(asteroid, timesExploded)
+    .with(wrapsAround)
+    .with(polygon, { lineWidth: 1.5, strokeStyle: "#eec" }, ...points)
+    .with(position, x, y)
+    .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
+    .with(velocity, vx, vy)
+    .create();
+}
+
+export function createRandomAsteroid() {
   const cx = world.globals.size.width / 2;
   const cy = world.globals.size.height / 2;
   const radius = Math.max(cx, cy) + 60;
@@ -225,23 +245,8 @@ export function createAsteroid() {
   const vy = velocityMagnitude * Math.sin(antiAngle);
   // Determine minimum size for the asteroid.
   const size = 10 + Math.random() * 8;
-  // Create a list of points for the asteroid.
-  const points: [number, number][] = [];
-  for (let a = 0; a < TAU; a += TAU / 12) {
-    // Vary the point distance from the center of the asteroid.
-    const variation = Math.random() * 8;
-    // Add the point to the list of polygon points.
-    points.push([Math.cos(a) * (size + variation), Math.sin(a) * (size + variation)]);
-  }
-  return world
-    .entity()
-    .with(asteroid)
-    .with(wrapsAround)
-    .with(polygon, { lineWidth: 1.5, strokeStyle: "#eec" }, ...points)
-    .with(position, x, y)
-    .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
-    .with(velocity, vx, vy)
-    .create();
+  // Create the asteroid.
+  return createAsteroid(x, y, vx, vy, size);
 }
 
 export function createPlayer(x: number, y: number, { vx = 0, vy = 0 } = {}) {
