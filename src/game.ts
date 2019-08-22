@@ -17,12 +17,10 @@ export const world = new World<Globals>({
 
 /* C O M P O N E N T S */
 
-// Tag components:
 const asteroid = world.addComponent("asteroid");
 const player = world.addComponent("player");
 const wrapsAround = world.addComponent("wrapsAround");
 
-// Data components:
 const friction = world.addComponent("friction", (amount: number) => ({ amount }));
 
 interface PolygonOptions {
@@ -237,7 +235,8 @@ export function createAsteroid() {
   }
   return world
     .entity()
-    .tagged(asteroid, wrapsAround)
+    .with(asteroid)
+    .with(wrapsAround)
     .with(polygon, { lineWidth: 1.5, strokeStyle: "#eec" }, ...points)
     .with(position, x, y)
     .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
@@ -248,7 +247,8 @@ export function createAsteroid() {
 export function createPlayer(x: number, y: number, { vx = 0, vy = 0 } = {}) {
   return world
     .entity()
-    .tagged(player, wrapsAround)
+    .with(player)
+    .with(wrapsAround)
     .with(friction, 0.04)
     .with(polygon, { strokeStyle: "#0f0" }, [9, 0], [-9, 8], [-6, 0], [-9, -8])
     .with(position, x, y)

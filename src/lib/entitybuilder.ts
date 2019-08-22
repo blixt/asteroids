@@ -16,11 +16,6 @@ export default class EntityBuilder<Globals> {
     return id;
   }
 
-  tagged(...components: ComponentId[]) {
-    for (const component of components) this.with(component);
-    return this;
-  }
-
   with<Args extends any[]>(component: ComponentId<Args, any>, ...properties: Args) {
     if (!this.components || !this.world) throw Error("invalid builder use");
     this.components.set(component, properties);
