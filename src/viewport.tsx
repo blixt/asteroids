@@ -27,26 +27,24 @@ export function Viewport({ run, world }: ViewportProps) {
     // Set up context for retina screens.
     context.scale(dpr, dpr);
 
-    let lastTS = 0;
     // As long as this is true, we'll keep rendering the next frame.
-    let scheduleNextFrame = true;
-
-    function frame(ts: number) {
+    let shouldContinue = true;
+    let lastTime = 0;
+    // Every frame run this code.
+    function frame(now: number) {
+      if (!shouldContinue) return;
       let dt = 1;
-      if (ts) {
-        if (ts - lastTS < 250) {
-          dt = (ts - lastTS) / (1000 / 60);
+      if (now) {
+        if (now - lastTime < 250) {
+          dt = (now - lastTime) / (1000 / 60);
         }
-        lastTS = ts;
+        lastTime = now;
       } else {
-        lastTS = 0;
+        lastTime = 0;
       }
       world.globals.deltaTime = dt;
       world.step();
-      if (scheduleNextFrame) {
-        // TODO: Fix corner cases where this causes multiple rAF per frame.
-        requestAnimationFrame(frame);
-      }
+      requestAnimationFrame(frame);
     }
 
     // Kick off the render loop.
@@ -54,7 +52,8 @@ export function Viewport({ run, world }: ViewportProps) {
 
     return () => {
       world.globals.context = undefined;
-      scheduleNextFrame = false;
+      world.globals.deltaTime = 0;
+      shouldContinue = false;
       context.restore();
     };
   }, [dpr, run, world]);
