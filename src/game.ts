@@ -181,6 +181,7 @@ world.addSystem("shooting", [position, rotation, shooter], (world, entities, pos
   }
 });
 
+// Make asteroids split into fragments when they are set to explode.
 world.addSystem("explodingAsteroids", [asteroid, position], (world, entities, asteroids, positions) => {
   for (const { id } of entities) {
     // Check if asteroid is exploding, and skip it if it isn't.
