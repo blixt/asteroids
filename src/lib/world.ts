@@ -112,6 +112,10 @@ type AnyComponentId5 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyCompo
 type AnyComponentId6 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
 
 // The World class puts the three concepts entity, component, and system together.
+// TODO: Add world.forEach(entity => { /* system code */ })
+//       - Run every forEach in lock step so entities are only iterated once
+//       - Support boundaries that force multiple iterations
+//       - Look into `const entity = yield`
 export default class World<Globals> {
   components = new Map<ComponentId, Component>();
   entities: (Entity | null)[] = [];
