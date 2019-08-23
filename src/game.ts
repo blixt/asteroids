@@ -18,10 +18,10 @@ export const world = new World<Globals>({
 /* C O M P O N E N T S */
 
 const asteroid = world.addComponent("asteroid", (timesExploded: number = 0) => ({ exploding: false, timesExploded }));
-const player = world.addComponent("player");
-const wrapsAround = world.addComponent("wrapsAround");
 
 const friction = world.addComponent("friction", (amount: number) => ({ amount }));
+
+const player = world.addComponent("player");
 
 interface PolygonOptions {
   fillStyle?: string;
@@ -48,6 +48,8 @@ const shooter = world.addComponent("shooter", (rate: number, shooting: boolean =
 });
 
 const velocity = world.addComponent("velocity", (vx: number, vy: number) => ({ vx, vy }));
+
+const wrapsAround = world.addComponent("wrapsAround");
 
 /* S Y S T E M S */
 
