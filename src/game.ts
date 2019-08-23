@@ -214,6 +214,26 @@ world.addSystem("collidePolygons", [collider, position, polygon], (world, entiti
   }
 });
 
+// Set all asteroids that have collided with a projectile to explode.
+world.addSystem("collideAsteroids", [collider, asteroid], (world, entities, colliders, asteroids) => {
+  for (const { id } of entities) {
+    const collider = colliders.get(id);
+    if (collider.collidingWith & world.bit(projectile)) {
+      asteroids.get(id).exploding = true;
+    }
+  }
+});
+
+// Destroy all projectiles that have collided with an asteroid.
+world.addSystem("destroyProjectiles", [collider, projectile], (world, entities, colliders) => {
+  for (const { id } of entities) {
+    const collider = colliders.get(id);
+    if (collider.collidingWith & world.bit(asteroid)) {
+      world.destroyEntity(id);
+    }
+  }
+});
+
 // Make asteroids split into fragments when they are set to explode.
 world.addSystem("explodingAsteroids", [asteroid, position], (world, entities, asteroids, positions) => {
   for (const { id } of entities) {
