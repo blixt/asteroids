@@ -36,7 +36,7 @@ const polygon = world.addComponent("polygon", (options: PolygonOptions, ...point
 const position = world.addComponent("position", (x: number, y: number) => ({ x, y }));
 
 const rotation = world.addComponent("rotation", (angle: number, delta: number) => {
-  return { angle, delta };
+  return { angle, delta, lastAngle: 0 };
 });
 
 const selfDestruct = world.addComponent("selfDestruct", (time: number) => {
@@ -129,11 +129,29 @@ world.addSystem(
   }
 );
 
-// Make objects rotate.
+// Make polygons rotate.
+world.addSystem("rotatePolygons", [rotation, polygon], (world, entities, rotations, polygons) => {
+  for (const { id } of entities) {
+    const rotation = rotations.get(id);
+    const amount = rotation.angle - rotation.lastAngle;
+    const polygon = polygons.get(id);
+    for (let i = 0; i < polygon.points.length; i++) {
+      const [x, y] = polygon.points[i];
+      const angle = Math.atan2(y, x) + amount;
+      const distance = Math.sqrt(x * x + y * y);
+      // TODO: If this drifts too much, replace with two arrays.
+      polygon.points[i] = [distance * Math.cos(angle), distance * Math.sin(angle)];
+    }
+  }
+});
+
+// Update rotation angle with the rotation delta.
 world.addSystem("rotate", [rotation], (world, entities, rotations) => {
   const dt = world.globals.deltaTime;
   for (const { id } of entities) {
     const rotation = rotations.get(id);
+    // Store the angle on the component in case angle is changed by another system.
+    rotation.lastAngle = rotation.angle;
     rotation.angle += (rotation.delta * dt) % TAU;
   }
 });
@@ -200,40 +218,32 @@ world.addSystem("clearScreen", [], (world, entities) => {
 });
 
 // Draw all polygons on screen.
-world.addSystem(
-  "drawPolys",
-  [polygon, position, Maybe(rotation)],
-  (world, entities, polygons, positions, rotations) => {
-    const ctx = world.globals.context;
-    if (!ctx) return;
-    for (const { id } of entities) {
-      const { options, points } = polygons.get(id);
-      const { x, y } = positions.get(id);
-      const rotation = rotations.get(id);
-      ctx.save();
-      ctx.translate(x, y);
-      if (rotation) {
-        ctx.rotate(rotation.angle);
-      }
-      ctx.beginPath();
-      ctx.moveTo(...points[0]);
-      for (let j = 1; j < points.length; j++) {
-        ctx.lineTo(...points[j]);
-      }
-      ctx.closePath();
-      if (options.fillStyle) {
-        ctx.fillStyle = options.fillStyle;
-        ctx.fill();
-      }
-      if (options.strokeStyle) {
-        if (options.lineWidth) ctx.lineWidth = options.lineWidth;
-        ctx.strokeStyle = options.strokeStyle;
-        ctx.stroke();
-      }
-      ctx.restore();
+world.addSystem("drawPolys", [polygon, position], (world, entities, polygons, positions) => {
+  const ctx = world.globals.context;
+  if (!ctx) return;
+  for (const { id } of entities) {
+    const { options, points } = polygons.get(id);
+    const { x, y } = positions.get(id);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(...points[0]);
+    for (let j = 1; j < points.length; j++) {
+      ctx.lineTo(...points[j]);
     }
+    ctx.closePath();
+    if (options.fillStyle) {
+      ctx.fillStyle = options.fillStyle;
+      ctx.fill();
+    }
+    if (options.strokeStyle) {
+      if (options.lineWidth) ctx.lineWidth = options.lineWidth;
+      ctx.strokeStyle = options.strokeStyle;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
-);
+});
 
 /* E N T I T Y   C R E A T I O N */
 
