@@ -155,6 +155,11 @@ export default class World<Globals> {
     return id;
   }
 
+  bit(componentId: ComponentId): number {
+    const component = this.components.get(componentId);
+    return component ? component.bit : 0;
+  }
+
   createEntity(componentEntries: Iterable<[ComponentId, any[]]>): EntityId {
     let mask = 0;
     // TODO: Generations for entity ids.
@@ -193,9 +198,11 @@ export default class World<Globals> {
     return new EntityBuilder<Globals>(this);
   }
 
-  hasComponent(entity: Entity, componentId: ComponentId): boolean {
+  hasComponent(entityId: EntityId, componentId: ComponentId): boolean {
     const component = this.components.get(componentId);
     if (!component) return false;
+    const entity = this.entities[entityId];
+    if (!entity) return false;
     return (entity.mask & component.bit) > 0;
   }
 
