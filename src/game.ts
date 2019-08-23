@@ -35,6 +35,8 @@ const polygon = world.addComponent("polygon", (options: PolygonOptions, ...point
 
 const position = world.addComponent("position", (x: number, y: number) => ({ x, y }));
 
+const projectile = world.addComponent("projectile");
+
 const rotation = world.addComponent("rotation", (angle: number, delta: number) => {
   return { angle, delta, lastAngle: 0 };
 });
@@ -308,6 +310,7 @@ export function createPlayer(x: number, y: number, { vx = 0, vy = 0 } = {}) {
 function createProjectile(x: number, y: number, direction: number, speed: number, offset: number = 10) {
   return world
     .entity()
+    .with(projectile)
     .with(polygon, { fillStyle: "#ff0" }, [2, 0], [-2, 1], [-2, -1])
     .with(position, x + Math.cos(direction) * offset, y + Math.sin(direction) * offset)
     .with(rotation, direction, 0)
