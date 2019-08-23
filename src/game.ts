@@ -1,3 +1,4 @@
+import { polyPoly } from "./collision";
 import World, { Maybe } from "./lib/world";
 
 interface Globals {
@@ -18,6 +19,8 @@ export const world = new World<Globals>({
 /* C O M P O N E N T S */
 
 const asteroid = world.addComponent("asteroid", (timesExploded: number = 0) => ({ exploding: false, timesExploded }));
+
+const collider = world.addComponent("collider", () => ({ collidingWith: 0 }));
 
 const friction = world.addComponent("friction", (amount: number) => ({ amount }));
 
@@ -183,6 +186,34 @@ world.addSystem("shooting", [position, rotation, shooter], (world, entities, pos
   }
 });
 
+// Make polygons collide when they overlap.
+world.addSystem("collidePolygons", [collider, position, polygon], (world, entities, colliders, positions, polygons) => {
+  // Reset collisions every step.
+  for (const { id } of entities) {
+    const collider = colliders.get(id);
+    collider.collidingWith = 0;
+  }
+  // WARNING: Naïve "check every pair" logic. Needs to use spatial mapping for performance!
+  for (let i = 0; i < entities.length; i++) {
+    const { id: id1, mask: mask1 } = entities[i];
+    const collider1 = colliders.get(id1);
+    // Check all other entities (but no duplicate pairs).
+    for (let j = i + 1; j < entities.length; j++) {
+      const { id: id2, mask: mask2 } = entities[j];
+      // Check if the two polygons are overlapping.
+      const pos1 = positions.get(id1);
+      const points1 = polygons.get(id1).points.map(([x, y]) => [x + pos1.x, y + pos1.y] as [number, number]);
+      const pos2 = positions.get(id2);
+      const points2 = polygons.get(id2).points.map(([x, y]) => [x + pos2.x, y + pos2.y] as [number, number]);
+      if (!polyPoly(points1, points2)) continue;
+      // There's a collision! Keep a record of all component types they're colliding with.
+      const collider2 = colliders.get(id2);
+      collider1.collidingWith |= mask2;
+      collider2.collidingWith |= mask1;
+    }
+  }
+});
+
 // Make asteroids split into fragments when they are set to explode.
 world.addSystem("explodingAsteroids", [asteroid, position], (world, entities, asteroids, positions) => {
   for (const { id } of entities) {
@@ -265,6 +296,7 @@ function createAsteroid(x: number, y: number, vx: number, vy: number, size: numb
     .entity()
     .with(asteroid, timesExploded)
     .with(wrapsAround)
+    .with(collider)
     .with(polygon, { lineWidth: 1.5, strokeStyle: "#eec" }, ...points)
     .with(position, x, y)
     .with(rotation, Math.random() * TAU, (Math.random() - 0.5) * 0.01)
@@ -298,6 +330,7 @@ export function createPlayer(x: number, y: number, { vx = 0, vy = 0 } = {}) {
     .entity()
     .with(player)
     .with(wrapsAround)
+    .with(collider)
     .with(friction, 0.04)
     .with(polygon, { strokeStyle: "#0f0" }, [9, 0], [-9, 8], [-6, 0], [-9, -8])
     .with(position, x, y)
@@ -311,6 +344,7 @@ function createProjectile(x: number, y: number, direction: number, speed: number
   return world
     .entity()
     .with(projectile)
+    .with(collider)
     .with(polygon, { fillStyle: "#ff0" }, [2, 0], [-2, 1], [-2, -1])
     .with(position, x + Math.cos(direction) * offset, y + Math.sin(direction) * offset)
     .with(rotation, direction, 0)
