@@ -62,9 +62,7 @@ interface ReadonlyStorage<Data> {
 
 // Infers a tuple of storages for the provided set of component id types.
 type InferStorageTuple<Ids> = {
-  [K in keyof Ids]: Ids[K] extends AnyComponentId<any[], infer Data>
-    ? ReadonlyStorage<Data extends NoStorage ? NoStorage : Data>
-    : never
+  [K in keyof Ids]: Ids[K] extends AnyComponentId<any[], infer Data> ? ReadonlyStorage<Data> : never;
 };
 
 // A function that moves a system one step forward.
@@ -103,13 +101,6 @@ type ModComponentId<Args extends any[], Data> = [Modifier, ComponentId<Args, Dat
 type AnyComponentId<Args extends any[] = unknown[], Data = unknown> =
   | ComponentId<Args, Data>
   | ModComponentId<Args, Data>;
-// Convenience tuples that makes the addSystem overloads look cleaner.
-type AnyComponentId1 = [AnyComponentId];
-type AnyComponentId2 = [AnyComponentId, AnyComponentId];
-type AnyComponentId3 = [AnyComponentId, AnyComponentId, AnyComponentId];
-type AnyComponentId4 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
-type AnyComponentId5 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
-type AnyComponentId6 = [AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId, AnyComponentId];
 
 // The World class puts the three concepts entity, component, and system together.
 // TODO: Add world.forEach(entity => { /* system code */ })
@@ -141,17 +132,16 @@ export default class World<Globals> {
     return id;
   }
 
-  addSystem<Ids extends []>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId1>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId2>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId3>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId4>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId5>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem<Ids extends AnyComponentId6>(name: string, components: Ids, step: StepFn<Globals, Ids>): void;
-  addSystem(name: string, components: any[], step: StepFn<Globals, any>) {
+  addSystem<Ids extends AnyComponentId[]>(name: string, components: [...Ids], step: StepFn<Globals, Ids>) {
     const [componentIds, require, exclude] = this.resolveAnyComponentIds(components);
     const id: SystemId = Symbol(`${name} system`);
-    this.systems.set(id, { components: componentIds, require, exclude, step });
+    this.systems.set(id, {
+      components: componentIds,
+      require,
+      exclude,
+      // TODO: Identify why using `Ids` here breaks.
+      step: step as StepFn<Globals, AnyComponentId[]>,
+    });
     return id;
   }
 
@@ -240,7 +230,10 @@ export default class World<Globals> {
     const indexKey = `${require}-${exclude}`;
     const cachedEntities = this.entitiesIndex.get(indexKey);
     if (cachedEntities) return cachedEntities;
-    const entities = this.entities.filter(e => e && (e.mask & require) === require && !(e.mask & exclude)) as Entity[];
+    const entities = this.entities.filter((e): e is Entity => {
+      if (!e) return false;
+      return (e.mask & require) === require && !(e.mask & exclude);
+    });
     this.entitiesIndex.set(indexKey, entities);
     console.log("Built index for filter %s (count: %d)", indexKey, entities.length);
     return entities;
@@ -297,13 +290,15 @@ export default class World<Globals> {
 }
 
 // Adds type V to the start of tuple T.
-type Unshift<T extends any[], V> = ((_: V, ...t: T) => any) extends ((...m: infer M) => any) ? M : never;
+type Unshift<T extends any[], V> = ((_: V, ...t: T) => any) extends (...m: infer M) => any ? M : never;
 
 // Drops any value that extends X in tuple T.
 // TODO: Try to get rid of this recursive type.
 type Drop<T extends any[], X> = {
   0: T;
-  1: ((...t: T) => any) extends ((h: infer H, ...R: infer R) => any)
-    ? (H extends X ? Drop<R, X> : Unshift<Drop<R, X>, H>)
+  1: ((...t: T) => any) extends (h: infer H, ...R: infer R) => any
+    ? H extends X
+      ? Drop<R, X>
+      : Unshift<Drop<R, X>, H>
     : never;
 }[T extends [any, ...any[]] ? 1 : 0];
