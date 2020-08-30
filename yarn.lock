@@ -2934,7 +2934,7 @@ __metadata:
     "@types/react-dom": ^16.9.8
     react: ^16.13.1
     react-dom: ^16.13.1
-    react-scripts: ^3.4.3
+    react-scripts: 3.4.3
     typescript: ^4.0.2
   languageName: unknown
   linkType: soft
@@ -11413,7 +11413,7 @@ fsevents@~2.1.2:
   languageName: node
   linkType: hard
 
-"react-scripts@npm:^3.4.3":
+"react-scripts@npm:3.4.3":
   version: 3.4.3
   resolution: "react-scripts@npm:3.4.3"
   dependencies:
