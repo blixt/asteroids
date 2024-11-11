@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { createPlayer, createRandomAsteroid, world } from "./game";
 import "./index.css";
 import { Viewport } from "./Viewport";
@@ -42,4 +42,8 @@ const handleKey = (e: KeyboardEvent) => {
 document.addEventListener("keydown", handleKey);
 document.addEventListener("keyup", handleKey);
 
-ReactDOM.render(<Viewport run={true} world={world} />, document.getElementById("root"));
+// Create root and render
+const container = document.getElementById("root");
+if (!container) throw new Error("Failed to find the root element");
+const root = createRoot(container);
+root.render(<Viewport run={true} world={world} />);

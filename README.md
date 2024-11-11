@@ -3,5 +3,5 @@
 To start it up, run:
 
 ```bash
-yarn start
+yarn dev
 ```

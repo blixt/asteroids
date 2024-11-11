@@ -1,4 +1,5 @@
-import World, { ComponentId, EntityId } from "./world";
+import type World from "./world";
+import type { ComponentId, EntityId } from "./world";
 
 export default class EntityBuilder<Globals> {
   private components? = new Map<ComponentId, any[]>();

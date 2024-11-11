@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useRef } from "react";
-import { GameWorld } from "./game";
+import type { GameWorld } from "./game";
 
 interface ViewportProps {
   run: boolean;
